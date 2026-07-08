@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#2563EB">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>DMP Attendance</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ===== HEADER ===== -->
+  <header class="app-header">
+    <div class="header-left">
+      <span class="logo">📋</span>
+      <h1>DMP Attendance</h1>
+    </div>
+    <span id="header-clock" class="header-clock"></span>
+  </header>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <main class="app-main">
+
+    <!-- PAGE: Dashboard -->
+    <section id="page-dashboard" class="page active">
+      <div class="stats-grid">
+        <div class="stat-card accent-blue">
+          <div class="stat-icon">👥</div>
+          <div class="stat-value" id="stat-total-students">0</div>
+          <div class="stat-label">Total Students</div>
+        </div>
+        <div class="stat-card accent-green">
+          <div class="stat-icon">✅</div>
+          <div class="stat-value" id="stat-checked-in">0</div>
+          <div class="stat-label">Checked In Today</div>
+        </div>
+        <div class="stat-card accent-amber">
+          <div class="stat-icon">⏱️</div>
+          <div class="stat-value" id="stat-avg-hours">0h</div>
+          <div class="stat-label">Avg Hours Today</div>
+        </div>
+        <div class="stat-card accent-purple">
+          <div class="stat-icon">🚪</div>
+          <div class="stat-value" id="stat-checked-out">0</div>
+          <div class="stat-label">Checked Out</div>
+        </div>
+      </div>
+
+      <div class="section-header">
+        <h2>Today's Attendance</h2>
+        <span id="today-date" class="date-badge"></span>
+      </div>
+
+      <div id="today-attendance-list" class="attendance-list">
+        <div class="empty-state">
+          <div class="empty-icon">📭</div>
+          <p>No attendance records for today yet.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAGE: Check-In -->
+    <section id="page-checkin" class="page">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="checkin-search" placeholder="Search student name..." autocomplete="off">
+      </div>
+      <div id="checkin-results" class="student-list">
+        <div class="empty-state">
+          <div class="empty-icon">👆</div>
+          <p>Search for a student to check them in.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAGE: Check-Out -->
+    <section id="page-checkout" class="page">
+      <div class="section-header">
+        <h2>Currently Present</h2>
+        <span id="checkout-count" class="count-badge">0</span>
+      </div>
+      <div id="checkout-list" class="attendance-list">
+        <div class="empty-state">
+          <div class="empty-icon">🏠</div>
+          <p>No one is currently checked in.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAGE: Register -->
+    <section id="page-register" class="page">
+      <form id="register-form" class="register-form">
+        <h2>Student Registration</h2>
+
+        <div class="photo-upload" id="photo-upload-area">
+          <input type="file" id="photo-input" accept="image/*" capture="environment" hidden>
+          <div id="photo-preview" class="photo-preview">
+            <span class="photo-placeholder">📷</span>
+            <span>Tap to add photo</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="reg-name">Full Name *</label>
+          <input type="text" id="reg-name" required placeholder="Enter full name">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="reg-age">Age *</label>
+            <input type="number" id="reg-age" required min="1" max="120" placeholder="Age">
+          </div>
+          <div class="form-group">
+            <label for="reg-phone">Phone Number *</label>
+            <input type="tel" id="reg-phone" required placeholder="01x-xxxxxxx">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="reg-email">Email</label>
+          <input type="email" id="reg-email" placeholder="email@example.com">
+        </div>
+
+        <div class="form-group">
+          <label for="reg-address">Home Address</label>
+          <textarea id="reg-address" rows="2" placeholder="Enter address"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="reg-reason">Reason to Join Class *</label>
+          <textarea id="reg-reason" rows="2" required placeholder="Why do you want to join?"></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary btn-block">Register Student</button>
+          <button type="button" id="btn-show-qr" class="btn btn-outline btn-block">📱 Show Registration QR</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- PAGE: Students -->
+    <section id="page-students" class="page">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="students-search" placeholder="Search or filter students..." autocomplete="off">
+      </div>
+      <div id="students-list" class="student-list">
+        <div class="empty-state">
+          <div class="empty-icon">📝</div>
+          <p>No students registered yet.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== BOTTOM NAV ===== -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-page="dashboard">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">Dashboard</span>
+    </button>
+    <button class="nav-btn" data-page="checkin">
+      <span class="nav-icon">✅</span>
+      <span class="nav-label">Check-In</span>
+    </button>
+    <button class="nav-btn" data-page="checkout">
+      <span class="nav-icon">🚪</span>
+      <span class="nav-label">Check-Out</span>
+    </button>
+    <button class="nav-btn" data-page="register">
+      <span class="nav-icon">➕</span>
+      <span class="nav-label">Register</span>
+    </button>
+    <button class="nav-btn" data-page="students">
+      <span class="nav-icon">👥</span>
+      <span class="nav-label">Students</span>
+    </button>
+  </nav>
+
+  <!-- ===== MODALS ===== -->
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <!-- Confirm Check-In Modal -->
+    <div id="modal-confirm-checkin" class="modal hidden">
+      <div class="modal-header">
+        <h3>Confirm Check-In</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-checkin-body"></div>
+      <div class="modal-footer">
+        <button class="btn btn-outline modal-close">Cancel</button>
+        <button class="btn btn-primary" id="btn-confirm-checkin">✅ Check In</button>
+      </div>
+    </div>
+
+    <!-- Confirm Check-Out Modal -->
+    <div id="modal-confirm-checkout" class="modal hidden">
+      <div class="modal-header">
+        <h3>Confirm Check-Out</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-checkout-body"></div>
+      <div class="modal-footer">
+        <button class="btn btn-outline modal-close">Cancel</button>
+        <button class="btn btn-danger" id="btn-confirm-checkout">🚪 Check Out</button>
+      </div>
+    </div>
+
+    <!-- Student Detail Modal -->
+    <div id="modal-student-detail" class="modal hidden">
+      <div class="modal-header">
+        <h3>Student Details</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-detail-body"></div>
+      <div class="modal-footer">
+        <button class="btn btn-outline modal-close">Close</button>
+        <button class="btn btn-danger" id="btn-delete-student">🗑️ Delete</button>
+      </div>
+    </div>
+
+    <!-- QR Code Modal -->
+    <div id="modal-qr" class="modal hidden">
+      <div class="modal-header">
+        <h3>Registration QR Code</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body modal-qr-body">
+        <p class="qr-instruction">New students: scan this QR code to open the registration form.</p>
+        <div id="qr-container" class="qr-container"></div>
+        <p class="qr-url" id="qr-url-display"></p>
+        <button class="btn btn-outline btn-sm" id="btn-copy-url">📋 Copy URL</button>
+      </div>
+    </div>
+
+    <!-- Delete Confirm Modal -->
+    <div id="modal-delete-confirm" class="modal hidden">
+      <div class="modal-header">
+        <h3>Delete Student?</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete this student? All their attendance records will also be removed.</p>
+        <p class="text-danger">This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline modal-close">Cancel</button>
+        <button class="btn btn-danger" id="btn-confirm-delete">🗑️ Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
