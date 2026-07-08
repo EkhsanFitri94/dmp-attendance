@@ -623,24 +623,12 @@ document.getElementById('btn-confirm-delete').addEventListener('click', async ()
 });
 
 // ─── QR Code ──────────────────────────────────────────────────
-document.getElementById('btn-show-qr').addEventListener('click', async () => {
+document.getElementById('btn-show-qr').addEventListener('click', () => {
   showModal('modal-qr');
   const container = document.getElementById('qr-container');
-  container.innerHTML = '';
-
+  const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(appUrl);
+  container.innerHTML = `<img src="${qrUrl}" alt="QR Code" width="220" height="220" style="border-radius:8px;" onerror="this.parentElement.innerHTML='<p style=color:var(--red)>Failed to load QR. Check internet connection.</p>'">`;
   document.getElementById('qr-url-display').textContent = appUrl;
-
-  try {
-    const canvas = document.createElement('canvas');
-    await QRCode.toCanvas(canvas, appUrl, {
-      width: 220,
-      margin: 1,
-      color: { dark: '#1F2937', light: '#FFFFFF' }
-    });
-    container.appendChild(canvas);
-  } catch (err) {
-    container.innerHTML = '<p style="color:var(--red);">Failed to generate QR. Ensure internet connection for first load.</p>';
-  }
 });
 
 document.getElementById('btn-copy-url').addEventListener('click', () => {
