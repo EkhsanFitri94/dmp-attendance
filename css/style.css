@@ -41,12 +41,163 @@ html, body {
 }
 
 body {
-  display: flex;
-  flex-direction: column;
   max-width: 480px;
   margin: 0 auto;
   position: relative;
   background: var(--bg);
+}
+
+/* Admin mode uses flex column layout */
+body.admin-mode {
+  display: flex;
+  flex-direction: column;
+}
+
+body.student-mode {
+  display: block;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.hidden { display: none !important; }
+
+/* ============================================================
+   STUDENT VIEW
+   ============================================================ */
+#student-view {
+  min-height: 100%;
+  background: var(--bg);
+  padding-bottom: 40px;
+}
+
+.student-header {
+  background: var(--primary);
+  color: #fff;
+  padding: 24px 20px 20px;
+  text-align: center;
+}
+
+.student-header-left {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.student-logo {
+  height: 48px;
+  width: auto;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  object-fit: cover;
+}
+
+.student-logo-fallback {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.student-header h1 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.student-main {
+  padding: 16px;
+}
+
+.student-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.student-card-header {
+  text-align: center;
+  padding: 24px 20px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.student-card-icon {
+  font-size: 40px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.student-card-header h2 {
+  font-size: 17px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.student-card-header p {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.student-card .register-form {
+  padding: 16px 20px 20px;
+}
+
+.registration-success {
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.success-icon {
+  font-size: 56px;
+  margin-bottom: 12px;
+}
+
+.registration-success h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--green);
+  margin-bottom: 6px;
+}
+
+.registration-success p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+
+.admin-link {
+  text-align: center;
+  margin-top: 16px;
+  padding-bottom: 24px;
+}
+
+.admin-link a {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-decoration: none;
+  opacity: 0.6;
+}
+
+.admin-link a:hover,
+.admin-link a:active {
+  opacity: 1;
+  color: var(--text-secondary);
+}
+
+/* ============================================================
+   ADMIN VIEW
+   ============================================================ */
+#admin-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+#admin-view .app-main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  padding-bottom: calc(var(--nav-height) + 16px);
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ===== HEADER ===== */
@@ -66,19 +217,39 @@ body {
 .header-left .logo { font-size: 22px; }
 .header-left h1 { font-size: 16px; font-weight: 600; }
 
-.header-clock { font-size: 13px; opacity: 0.9; font-variant-numeric: tabular-nums; }
-
-/* ===== MAIN ===== */
-.app-main {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
-  padding-bottom: calc(var(--nav-height) + 16px);
-  -webkit-overflow-scrolling: touch;
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
+.header-clock { font-size: 13px; opacity: 0.9; font-variant-numeric: tabular-nums; }
+
+.btn-icon-lock {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: #fff;
+  font-size: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.2s;
+}
+
+.btn-icon-lock:hover { background: rgba(255,255,255,0.3); }
+
+/* ===== MAIN ===== */
 .page { display: none; }
 .page.active { display: block; }
+
+.admin-reg-header {
+  margin-bottom: 16px;
+}
 
 /* ===== STATS GRID ===== */
 .stats-grid {
@@ -488,6 +659,39 @@ body {
   justify-content: flex-end;
 }
 
+/* PIN Modal */
+.pin-modal-body { text-align: center; }
+
+.pin-instruction {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+.pin-input {
+  width: 100%;
+  max-width: 200px;
+  padding: 12px 16px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 24px;
+  font-family: var(--font);
+  text-align: center;
+  letter-spacing: 8px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.pin-input:focus {
+  border-color: var(--primary);
+}
+
+.pin-error {
+  font-size: 13px;
+  color: var(--red);
+  margin-top: 8px;
+}
+
 /* QR Modal */
 .modal-qr-body {
   text-align: center;
@@ -546,7 +750,7 @@ body {
 /* ===== TOAST ===== */
 .toast {
   position: fixed;
-  bottom: calc(var(--nav-height) + 20px);
+  bottom: 30px;
   left: 50%;
   transform: translateX(-50%);
   background: var(--text);

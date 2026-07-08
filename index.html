@@ -10,179 +10,310 @@
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
+<body class="student-mode">
 
-  <!-- ===== HEADER ===== -->
-  <header class="app-header">
-    <div class="header-left">
-      <span class="logo">📋</span>
-      <h1>DMP Attendance</h1>
-    </div>
-    <span id="header-clock" class="header-clock"></span>
-  </header>
-
-  <!-- ===== MAIN CONTENT ===== -->
-  <main class="app-main">
-
-    <!-- PAGE: Dashboard -->
-    <section id="page-dashboard" class="page active">
-      <div class="stats-grid">
-        <div class="stat-card accent-blue">
-          <div class="stat-icon">👥</div>
-          <div class="stat-value" id="stat-total-students">0</div>
-          <div class="stat-label">Total Students</div>
-        </div>
-        <div class="stat-card accent-green">
-          <div class="stat-icon">✅</div>
-          <div class="stat-value" id="stat-checked-in">0</div>
-          <div class="stat-label">Checked In Today</div>
-        </div>
-        <div class="stat-card accent-amber">
-          <div class="stat-icon">⏱️</div>
-          <div class="stat-value" id="stat-avg-hours">0h</div>
-          <div class="stat-label">Avg Hours Today</div>
-        </div>
-        <div class="stat-card accent-purple">
-          <div class="stat-icon">🚪</div>
-          <div class="stat-value" id="stat-checked-out">0</div>
-          <div class="stat-label">Checked Out</div>
-        </div>
+  <!-- ============================================================
+       STUDENT VIEW (default - no admin access)
+       ============================================================ -->
+  <div id="student-view">
+    <header class="student-header">
+      <div class="student-header-left">
+        <img src="https://www.dmpusatpengajian.com.my/wp-content/uploads/2021/02/cropped-20210224_120757.jpg" alt="DMP" class="student-logo" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+        <span class="student-logo-fallback" style="display:none">📋 DMP</span>
       </div>
+      <h1>Student Registration</h1>
+    </header>
 
-      <div class="section-header">
-        <h2>Today's Attendance</h2>
-        <span id="today-date" class="date-badge"></span>
-      </div>
-
-      <div id="today-attendance-list" class="attendance-list">
-        <div class="empty-state">
-          <div class="empty-icon">📭</div>
-          <p>No attendance records for today yet.</p>
+    <main class="student-main">
+      <div class="student-card">
+        <div class="student-card-header">
+          <span class="student-card-icon">📝</span>
+          <h2>Daftar Pelajar Baru</h2>
+          <p>Sila isi maklumat anda untuk mendaftar kelas</p>
         </div>
-      </div>
-    </section>
 
-    <!-- PAGE: Check-In -->
-    <section id="page-checkin" class="page">
-      <div class="search-box">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="checkin-search" placeholder="Search student name..." autocomplete="off">
-      </div>
-      <div id="checkin-results" class="student-list">
-        <div class="empty-state">
-          <div class="empty-icon">👆</div>
-          <p>Search for a student to check them in.</p>
-        </div>
-      </div>
-    </section>
+        <form id="register-form" class="register-form">
 
-    <!-- PAGE: Check-Out -->
-    <section id="page-checkout" class="page">
-      <div class="section-header">
-        <h2>Currently Present</h2>
-        <span id="checkout-count" class="count-badge">0</span>
-      </div>
-      <div id="checkout-list" class="attendance-list">
-        <div class="empty-state">
-          <div class="empty-icon">🏠</div>
-          <p>No one is currently checked in.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- PAGE: Register -->
-    <section id="page-register" class="page">
-      <form id="register-form" class="register-form">
-        <h2>Student Registration</h2>
-
-        <div class="photo-upload" id="photo-upload-area">
-          <input type="file" id="photo-input" accept="image/*" capture="environment" hidden>
-          <div id="photo-preview" class="photo-preview">
-            <span class="photo-placeholder">📷</span>
-            <span>Tap to add photo</span>
+          <div class="photo-upload" id="photo-upload-area">
+            <input type="file" id="photo-input" accept="image/*" capture="environment" hidden>
+            <div id="photo-preview" class="photo-preview">
+              <span class="photo-placeholder">📷</span>
+              <span>Tap to add photo</span>
+            </div>
           </div>
-        </div>
 
-        <div class="form-group">
-          <label for="reg-name">Full Name *</label>
-          <input type="text" id="reg-name" required placeholder="Enter full name">
-        </div>
-
-        <div class="form-row">
           <div class="form-group">
-            <label for="reg-age">Age *</label>
-            <input type="number" id="reg-age" required min="1" max="120" placeholder="Age">
+            <label for="reg-name">Full Name *</label>
+            <input type="text" id="reg-name" required placeholder="Enter full name">
           </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="reg-age">Age *</label>
+              <input type="number" id="reg-age" required min="1" max="120" placeholder="Age">
+            </div>
+            <div class="form-group">
+              <label for="reg-phone">Phone Number *</label>
+              <input type="tel" id="reg-phone" required placeholder="01x-xxxxxxx">
+            </div>
+          </div>
+
           <div class="form-group">
-            <label for="reg-phone">Phone Number *</label>
-            <input type="tel" id="reg-phone" required placeholder="01x-xxxxxxx">
+            <label for="reg-email">Email</label>
+            <input type="email" id="reg-email" placeholder="email@example.com">
+          </div>
+
+          <div class="form-group">
+            <label for="reg-address">Home Address</label>
+            <textarea id="reg-address" rows="2" placeholder="Enter address"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="reg-reason">Reason to Join Class *</label>
+            <textarea id="reg-reason" rows="2" required placeholder="Why do you want to join?"></textarea>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-block">Daftar Sekarang</button>
+          </div>
+        </form>
+
+        <div class="registration-success hidden" id="reg-success">
+          <div class="success-icon">✅</div>
+          <h3>Pendaftaran Berjaya!</h3>
+          <p>Maklumat anda telah disimpan.</p>
+          <button class="btn btn-outline btn-block" id="btn-register-another">Daftar Pelajar Lain</button>
+        </div>
+      </div>
+
+      <p class="admin-link">
+        <a href="#" id="btn-admin-access">🔒 Admin Access</a>
+      </p>
+    </main>
+  </div>
+
+  <!-- ============================================================
+       ADMIN VIEW (hidden until PIN entered)
+       ============================================================ -->
+  <div id="admin-view" class="hidden">
+
+    <header class="app-header">
+      <div class="header-left">
+        <span class="logo">📋</span>
+        <h1>DMP Attendance</h1>
+      </div>
+      <div class="header-right">
+        <span id="header-clock" class="header-clock"></span>
+        <button id="btn-admin-lock" class="btn-icon-lock" title="Lock admin">🔒</button>
+      </div>
+    </header>
+
+    <main class="app-main">
+
+      <!-- PAGE: Dashboard -->
+      <section id="page-dashboard" class="page active">
+        <div class="stats-grid">
+          <div class="stat-card accent-blue">
+            <div class="stat-icon">👥</div>
+            <div class="stat-value" id="stat-total-students">0</div>
+            <div class="stat-label">Total Students</div>
+          </div>
+          <div class="stat-card accent-green">
+            <div class="stat-icon">✅</div>
+            <div class="stat-value" id="stat-checked-in">0</div>
+            <div class="stat-label">Checked In Today</div>
+          </div>
+          <div class="stat-card accent-amber">
+            <div class="stat-icon">⏱️</div>
+            <div class="stat-value" id="stat-avg-hours">0h</div>
+            <div class="stat-label">Avg Hours Today</div>
+          </div>
+          <div class="stat-card accent-purple">
+            <div class="stat-icon">🚪</div>
+            <div class="stat-value" id="stat-checked-out">0</div>
+            <div class="stat-label">Checked Out</div>
           </div>
         </div>
 
-        <div class="form-group">
-          <label for="reg-email">Email</label>
-          <input type="email" id="reg-email" placeholder="email@example.com">
+        <div class="section-header">
+          <h2>Today's Attendance</h2>
+          <span id="today-date" class="date-badge"></span>
         </div>
 
-        <div class="form-group">
-          <label for="reg-address">Home Address</label>
-          <textarea id="reg-address" rows="2" placeholder="Enter address"></textarea>
+        <div id="today-attendance-list" class="attendance-list">
+          <div class="empty-state">
+            <div class="empty-icon">📭</div>
+            <p>No attendance records for today yet.</p>
+          </div>
         </div>
+      </section>
 
-        <div class="form-group">
-          <label for="reg-reason">Reason to Join Class *</label>
-          <textarea id="reg-reason" rows="2" required placeholder="Why do you want to join?"></textarea>
+      <!-- PAGE: Check-In -->
+      <section id="page-checkin" class="page">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="checkin-search" placeholder="Search student name..." autocomplete="off">
         </div>
-
-        <div class="form-actions">
-          <button type="submit" class="btn btn-primary btn-block">Register Student</button>
-          <button type="button" id="btn-show-qr" class="btn btn-outline btn-block">📱 Show Registration QR</button>
+        <div id="checkin-results" class="student-list">
+          <div class="empty-state">
+            <div class="empty-icon">👆</div>
+            <p>Search for a student to check them in.</p>
+          </div>
         </div>
-      </form>
-    </section>
+      </section>
 
-    <!-- PAGE: Students -->
-    <section id="page-students" class="page">
-      <div class="search-box">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="students-search" placeholder="Search or filter students..." autocomplete="off">
-      </div>
-      <div id="students-list" class="student-list">
-        <div class="empty-state">
-          <div class="empty-icon">📝</div>
-          <p>No students registered yet.</p>
+      <!-- PAGE: Check-Out -->
+      <section id="page-checkout" class="page">
+        <div class="section-header">
+          <h2>Currently Present</h2>
+          <span id="checkout-count" class="count-badge">0</span>
         </div>
-      </div>
-    </section>
+        <div id="checkout-list" class="attendance-list">
+          <div class="empty-state">
+            <div class="empty-icon">🏠</div>
+            <p>No one is currently checked in.</p>
+          </div>
+        </div>
+      </section>
 
-  </main>
+      <!-- PAGE: Register (admin side) -->
+      <section id="page-register" class="page">
+        <div class="section-header admin-reg-header">
+          <h2>Student Registration</h2>
+          <button type="button" id="btn-show-qr" class="btn btn-outline btn-sm">📱 QR Code</button>
+        </div>
+        <form id="admin-register-form" class="register-form">
+          <div class="photo-upload" id="admin-photo-area">
+            <input type="file" id="admin-photo-input" accept="image/*" capture="environment" hidden>
+            <div id="admin-photo-preview" class="photo-preview">
+              <span class="photo-placeholder">📷</span>
+              <span>Tap to add photo</span>
+            </div>
+          </div>
 
-  <!-- ===== BOTTOM NAV ===== -->
-  <nav class="bottom-nav">
-    <button class="nav-btn active" data-page="dashboard">
-      <span class="nav-icon">📊</span>
-      <span class="nav-label">Dashboard</span>
-    </button>
-    <button class="nav-btn" data-page="checkin">
-      <span class="nav-icon">✅</span>
-      <span class="nav-label">Check-In</span>
-    </button>
-    <button class="nav-btn" data-page="checkout">
-      <span class="nav-icon">🚪</span>
-      <span class="nav-label">Check-Out</span>
-    </button>
-    <button class="nav-btn" data-page="register">
-      <span class="nav-icon">➕</span>
-      <span class="nav-label">Register</span>
-    </button>
-    <button class="nav-btn" data-page="students">
-      <span class="nav-icon">👥</span>
-      <span class="nav-label">Students</span>
-    </button>
-  </nav>
+          <div class="form-group">
+            <label for="admin-reg-name">Full Name *</label>
+            <input type="text" id="admin-reg-name" required placeholder="Enter full name">
+          </div>
 
-  <!-- ===== MODALS ===== -->
+          <div class="form-row">
+            <div class="form-group">
+              <label for="admin-reg-age">Age *</label>
+              <input type="number" id="admin-reg-age" required min="1" max="120" placeholder="Age">
+            </div>
+            <div class="form-group">
+              <label for="admin-reg-phone">Phone Number *</label>
+              <input type="tel" id="admin-reg-phone" required placeholder="01x-xxxxxxx">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="admin-reg-email">Email</label>
+            <input type="email" id="admin-reg-email" placeholder="email@example.com">
+          </div>
+
+          <div class="form-group">
+            <label for="admin-reg-address">Home Address</label>
+            <textarea id="admin-reg-address" rows="2" placeholder="Enter address"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="admin-reg-reason">Reason to Join Class *</label>
+            <textarea id="admin-reg-reason" rows="2" required placeholder="Why do you want to join?"></textarea>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-block">Register Student</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- PAGE: Students -->
+      <section id="page-students" class="page">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="students-search" placeholder="Search or filter students..." autocomplete="off">
+        </div>
+        <div id="students-list" class="student-list">
+          <div class="empty-state">
+            <div class="empty-icon">📝</div>
+            <p>No students registered yet.</p>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- BOTTOM NAV (admin only) -->
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-page="dashboard">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">Dashboard</span>
+      </button>
+      <button class="nav-btn" data-page="checkin">
+        <span class="nav-icon">✅</span>
+        <span class="nav-label">Check-In</span>
+      </button>
+      <button class="nav-btn" data-page="checkout">
+        <span class="nav-icon">🚪</span>
+        <span class="nav-label">Check-Out</span>
+      </button>
+      <button class="nav-btn" data-page="register">
+        <span class="nav-icon">➕</span>
+        <span class="nav-label">Register</span>
+      </button>
+      <button class="nav-btn" data-page="students">
+        <span class="nav-icon">👥</span>
+        <span class="nav-label">Students</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- ============================================================
+       MODALS (shared)
+       ============================================================ -->
   <div id="modal-overlay" class="modal-overlay hidden">
+
+    <!-- PIN Entry Modal -->
+    <div id="modal-pin" class="modal">
+      <div class="modal-header">
+        <h3>🔒 Admin Access</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body pin-modal-body">
+        <p class="pin-instruction">Enter admin PIN to access attendance management</p>
+        <input type="password" id="pin-input" class="pin-input" maxlength="6" placeholder="Enter PIN" autocomplete="off" inputmode="numeric">
+        <p class="pin-error hidden" id="pin-error">Incorrect PIN. Please try again.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline modal-close">Cancel</button>
+        <button class="btn btn-primary" id="btn-pin-submit">Unlock</button>
+      </div>
+    </div>
+
+    <!-- Change PIN Modal -->
+    <div id="modal-change-pin" class="modal hidden">
+      <div class="modal-header">
+        <h3>Change Admin PIN</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="change-pin-new">New PIN</label>
+          <input type="password" id="change-pin-new" class="pin-input" maxlength="6" placeholder="New PIN" inputmode="numeric">
+        </div>
+        <div class="form-group">
+          <label for="change-pin-confirm">Confirm New PIN</label>
+          <input type="password" id="change-pin-confirm" class="pin-input" maxlength="6" placeholder="Confirm PIN" inputmode="numeric">
+        </div>
+        <p class="pin-error hidden" id="change-pin-error">PINs do not match or invalid.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline modal-close">Cancel</button>
+        <button class="btn btn-primary" id="btn-change-pin-save">Save PIN</button>
+      </div>
+    </div>
+
     <!-- Confirm Check-In Modal -->
     <div id="modal-confirm-checkin" class="modal hidden">
       <div class="modal-header">
@@ -229,7 +360,7 @@
         <button class="modal-close">&times;</button>
       </div>
       <div class="modal-body modal-qr-body">
-        <p class="qr-instruction">New students: scan this QR code to open the registration form.</p>
+        <p class="qr-instruction">Pelajar baru: scan QR ini untuk isi borang pendaftaran.</p>
         <div id="qr-container" class="qr-container"></div>
         <p class="qr-url" id="qr-url-display"></p>
         <button class="btn btn-outline btn-sm" id="btn-copy-url">📋 Copy URL</button>
