@@ -81,9 +81,14 @@
         <div class="registration-success hidden" id="reg-success">
           <div class="success-icon">✅</div>
           <h3>Pendaftaran Berjaya!</h3>
-          <p>Maklumat anda telah disimpan.</p>
+          <p>Maklumat telah disimpan dalam app ustaz.</p>
+          <p class="success-note">Form akan reset automatik untuk pelajar seterusnya...</p>
           <button class="btn btn-outline btn-block" id="btn-register-another">Daftar Pelajar Lain</button>
         </div>
+      </div>
+
+      <div class="student-notice">
+        <p>⚠️ App ini hanya untuk guna dalam <strong>1 phone sahaja</strong> (phone ustaz). Pelajar isi borang guna phone yang sama. Data tak akan sync ke device lain.</p>
       </div>
 
       <p class="admin-link">
@@ -360,7 +365,7 @@
         <button class="modal-close">&times;</button>
       </div>
       <div class="modal-body modal-qr-body">
-        <p class="qr-instruction">Pelajar baru: scan QR ini untuk isi borang pendaftaran.</p>
+        <p class="qr-instruction">Buka link ini pada phone ustaz untuk pelajar isi borang.<br><strong>Semua data disimpan dalam phone ini sahaja.</strong></p>
         <div id="qr-container" class="qr-container"></div>
         <p class="qr-url" id="qr-url-display"></p>
         <button class="btn btn-outline btn-sm" id="btn-copy-url">📋 Copy URL</button>

@@ -179,9 +179,11 @@ function escapeHtml(str) {
 function getPin() { return localStorage.getItem('dmp_admin_pin') || DEFAULT_PIN; }
 function setPin(pin) { localStorage.setItem('dmp_admin_pin', pin); }
 
-function isAdminUnlocked() { return sessionStorage.getItem('dmp_admin_unlocked') === 'true'; }
-function unlockAdmin() { sessionStorage.setItem('dmp_admin_unlocked', 'true'); }
-function lockAdmin() { sessionStorage.removeItem('dmp_admin_unlocked'); }
+// Admin state is in-memory only (resets every page load for security & to fix iOS issue)
+let adminUnlocked = false;
+function isAdminUnlocked() { return adminUnlocked; }
+function unlockAdmin() { adminUnlocked = true; }
+function lockAdmin() { adminUnlocked = false; }
 
 // ─── Mode Switching ───────────────────────────────────────────
 function switchToAdminMode() {
@@ -284,14 +286,21 @@ async function doRegister(data) {
 
   try {
     await db.addStudent(data);
-    showToast(`${data.name} registered!`, 'success');
+    showToast(`${data.name} registered! ✅`, 'success');
 
-    // Student view: show success state
     const isStudentView = document.body.classList.contains('student-mode');
     if (isStudentView) {
+      // Kiosk mode: show success briefly, then reset form for next student
       document.getElementById('register-form').classList.add('hidden');
       document.getElementById('reg-success').classList.remove('hidden');
+      // Auto-reset after 3 seconds for next student
+      setTimeout(() => {
+        document.getElementById('reg-success').classList.add('hidden');
+        document.getElementById('register-form').classList.remove('hidden');
+        resetStudentRegistrationForm();
+      }, 3000);
     } else {
+      // Admin side: reset immediately
       resetStudentRegistrationForm();
       loadDashboard();
     }
@@ -755,13 +764,9 @@ async function init() {
     updateClock();
     setInterval(updateClock, 30000);
 
-    // Check if admin is already unlocked (from same browser session)
-    if (isAdminUnlocked()) {
-      switchToAdminMode();
-    } else {
-      // Default: student view
-      switchToStudentMode();
-    }
+    // Always start in student/registration view (admin must enter PIN)
+    // No sessionStorage — prevents iOS from accidentally showing dashboard
+    switchToStudentMode();
   } catch (err) {
     console.error('Init failed:', err);
     document.getElementById('student-view').innerHTML = '<div style="padding:40px;text-align:center;"><h2>App failed to load</h2><p>Please refresh the page.</p></div>';

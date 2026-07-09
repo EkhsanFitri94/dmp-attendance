@@ -161,7 +161,28 @@ body.student-mode {
 .registration-success p {
   font-size: 14px;
   color: var(--text-secondary);
-  margin-bottom: 20px;
+  margin-bottom: 6px;
+}
+
+.success-note {
+  font-size: 12px !important;
+  color: var(--text-muted) !important;
+  margin-bottom: 16px !important;
+}
+
+.student-notice {
+  background: #FEF3C7;
+  border: 1px solid #FDE68A;
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin: 16px 0 0;
+  font-size: 12px;
+  color: #92400E;
+  line-height: 1.5;
+}
+
+.student-notice strong {
+  color: #78350F;
 }
 
 .admin-link {
