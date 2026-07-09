@@ -1,7 +1,7 @@
 /* ===== CSS Variables & Reset ===== */
 :root {
-  --primary: #2563EB;
-  --primary-dark: #1D4ED8;
+  --primary: #2ea3f2;
+  --primary-dark: #2490d5;
   --green: #10B981;
   --green-light: #D1FAE5;
   --amber: #F59E0B;
@@ -81,21 +81,13 @@ body.student-mode {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
   margin-bottom: 6px;
 }
 
 .student-logo {
-  height: 48px;
+  height: 60px;
   width: auto;
-  border-radius: 50%;
-  border: 2px solid #fff;
-  object-fit: cover;
-}
-
-.student-logo-fallback {
-  font-size: 20px;
-  font-weight: 600;
+  object-fit: contain;
 }
 
 .student-header h1 {
@@ -235,6 +227,7 @@ body.student-mode {
 }
 
 .header-left { display: flex; align-items: center; gap: 8px; }
+.header-left .header-logo { height: 32px; width: auto; border-radius: 4px; }
 .header-left .logo { font-size: 22px; }
 .header-left h1 { font-size: 16px; font-weight: 600; }
 
