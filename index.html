@@ -183,9 +183,9 @@
 
       <!-- PAGE: Register (admin side) -->
       <section id="page-register" class="page">
-        <div class="section-header admin-reg-header">
+        <div class="admin-reg-header">
           <h2>Student Registration</h2>
-          <button type="button" id="btn-show-qr" class="btn btn-outline btn-sm">📱 QR Code</button>
+          <p class="kiosk-tip">💡 <strong>Kiosk Mode:</strong> Tekan butang <strong>🔒 Lock</strong> di header untuk buka student form. Bagi phone pada pelajar, dia isi borang, lepas hantar auto-reset untuk pelajar seterusnya.</p>
         </div>
         <form id="admin-register-form" class="register-form">
           <div class="photo-upload" id="admin-photo-area">
@@ -355,20 +355,6 @@
       <div class="modal-footer">
         <button class="btn btn-outline modal-close">Close</button>
         <button class="btn btn-danger" id="btn-delete-student">🗑️ Delete</button>
-      </div>
-    </div>
-
-    <!-- QR Code Modal -->
-    <div id="modal-qr" class="modal hidden">
-      <div class="modal-header">
-        <h3>Registration QR Code</h3>
-        <button class="modal-close">&times;</button>
-      </div>
-      <div class="modal-body modal-qr-body">
-        <p class="qr-instruction">Buka link ini pada phone ustaz untuk pelajar isi borang.<br><strong>Semua data disimpan dalam phone ini sahaja.</strong></p>
-        <div id="qr-container" class="qr-container"></div>
-        <p class="qr-url" id="qr-url-display"></p>
-        <button class="btn btn-outline btn-sm" id="btn-copy-url">📋 Copy URL</button>
       </div>
     </div>
 
