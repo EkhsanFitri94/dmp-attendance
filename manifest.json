@@ -9,7 +9,7 @@
   "background_color": "#F3F4F6",
   "icons": [
     {
-      "src": "logo.webp",
+      "src": "logo.png",
       "sizes": "192x192",
       "type": "image/webp",
       "purpose": "any maskable"
