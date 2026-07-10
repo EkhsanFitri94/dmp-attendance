@@ -59,6 +59,22 @@ class AttendanceDB {
     });
   }
 
+  updateStudent(id, data) {
+    return new Promise((resolve, reject) => {
+      const tx = this.db.transaction('students','readwrite');
+      const store = tx.objectStore('students');
+      const getReq = store.get(id);
+      getReq.onsuccess = (e) => {
+        const existing = e.target.result;
+        if (!existing) { reject(new Error('Student not found')); return; }
+        const updated = { ...existing, ...data, id: id };
+        store.put(updated);
+      };
+      tx.oncomplete = () => resolve();
+      tx.onerror = (e) => reject(e.target.error);
+    });
+  }
+
   deleteStudent(id) {
     return new Promise((resolve, reject) => {
       const tx = this.db.transaction(['students','attendance'], 'readwrite');
@@ -827,23 +843,96 @@ async function showStudentDetail(sid) {
   showModal('modal-student-detail');
 }
 
+// Edit student
+document.getElementById('btn-edit-student').addEventListener('click', async () => {
+  if (currentDeleteId === null) return;
+  hideAllModals();
+  // Reuse detail modal body as edit form
+  const s = await db.getStudent(currentDeleteId);
+  if (!s) return;
+
+  const html = `
+    <div class="form-group">
+      <label>Full Name *</label>
+      <input type="text" id="edit-name" value="${escapeHtml(s.name)}" required>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Age</label>
+        <input type="number" id="edit-age" value="${s.age||''}" min="1" max="120">
+      </div>
+      <div class="form-group">
+        <label>Phone</label>
+        <input type="tel" id="edit-phone" value="${escapeHtml(s.phone||'')}">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="edit-email" value="${escapeHtml(s.email||'')}">
+    </div>
+    <div class="form-group">
+      <label>Home Address</label>
+      <textarea id="edit-address" rows="2">${escapeHtml(s.address||'')}</textarea>
+    </div>
+    <div class="form-group">
+      <label>Reason to Join</label>
+      <input type="text" id="edit-reason" value="${escapeHtml(s.reasonToJoin||'')}">
+    </div>
+  `;
+
+  document.getElementById('modal-edit-body').innerHTML = html;
+  showModal('modal-edit-student');
+
+  document.getElementById('btn-save-edit').onclick = async () => {
+    const updated = {
+      name: document.getElementById('edit-name').value.trim(),
+      age: parseInt(document.getElementById('edit-age').value) || null,
+      phone: document.getElementById('edit-phone').value.trim(),
+      email: document.getElementById('edit-email').value.trim(),
+      address: document.getElementById('edit-address').value.trim(),
+      reasonToJoin: document.getElementById('edit-reason').value.trim()
+    };
+    if (!updated.name) { showToast('Name is required', 'error'); return; }
+    try {
+      await db.updateStudent(currentDeleteId, updated);
+      hideAllModals();
+      showToast(`${updated.name} updated!`, 'success');
+      loadStudents();
+      loadDashboard();
+    } catch (err) {
+      showToast('Update failed: ' + err.message, 'error');
+    }
+  };
+});
+
+// Delete with PIN protection
 document.getElementById('btn-delete-student').addEventListener('click', () => {
   hideAllModals();
+  document.getElementById('delete-pin-input').value = '';
+  document.getElementById('delete-pin-error').classList.add('hidden');
   showModal('modal-delete-confirm');
+  setTimeout(() => document.getElementById('delete-pin-input').focus(), 300);
 });
 
 document.getElementById('btn-confirm-delete').addEventListener('click', async () => {
-  if (currentDeleteId===null) return;
+  const pin = document.getElementById('delete-pin-input').value.trim();
+  if (pin !== getPin()) {
+    document.getElementById('delete-pin-error').classList.remove('hidden');
+    document.getElementById('delete-pin-input').value = '';
+    document.getElementById('delete-pin-input').focus();
+    return;
+  }
+  if (currentDeleteId === null) return;
   try {
     const s = await db.getStudent(currentDeleteId);
     await db.deleteStudent(currentDeleteId);
     hideAllModals();
-    showToast(`${s?s.name:'Student'} deleted`,'success');
+    showToast(`${s?s.name:'Student'} deleted`, 'success');
     currentDeleteId = null;
     loadStudents();
     loadDashboard();
   } catch (err) {
-    hideAllModals(); showToast('Failed to delete','error');
+    hideAllModals(); showToast('Failed to delete', 'error');
   }
 });
 
