@@ -362,6 +362,85 @@ async function loadDashboard() {
   }).join('');
 }
 
+// ─── Export Daily Report for WhatsApp ─────────────────────────
+async function exportDailyReport() {
+  const todayAttendance = await db.getTodayAttendance();
+  if (todayAttendance.length === 0) {
+    showToast('No attendance records to export.', 'error');
+    return;
+  }
+
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-MY', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  const timeStr = now.toLocaleTimeString('en-MY', { hour:'2-digit', minute:'2-digit' });
+
+  const present = todayAttendance.filter(a => a.status === 'present');
+  const completed = todayAttendance.filter(a => a.status === 'completed');
+  const all = todayAttendance.sort((a,b) => new Date(a.checkInTime) - new Date(b.checkInTime));
+
+  let report = `📊 *DMP Attendance Report*\n`;
+  report += `📅 ${dateStr}\n`;
+  report += `🕐 Generated: ${timeStr}\n`;
+  report += `━━━━━━━━━━━━━━━━━━━━\n`;
+
+  all.forEach((a, i) => {
+    const statusIcon = a.status === 'present' ? '🟢' : '✅';
+    const duration = a.checkOutTime
+      ? ` (${calcDuration(a.checkInTime, a.checkOutTime)})`
+      : ' - *Masih Dalam Kelas*';
+    const inTime = formatTime(a.checkInTime);
+    const outTime = a.checkOutTime ? formatTime(a.checkOutTime) : '----';
+    report += `${statusIcon} ${i+1}. ${a.studentName}\n`;
+    report += `   In: ${inTime} | Out: ${outTime}${duration}\n`;
+  });
+
+  report += `━━━━━━━━━━━━━━━━━━━━\n`;
+  report += `👥 Total: ${todayAttendance.length} pelajar\n`;
+  report += `🟢 Masih Dalam Kelas: ${present.length}\n`;
+  report += `✅ Checked Out: ${completed.length}\n`;
+
+  if (completed.length > 0) {
+    const totalHrs = completed.reduce((s,a) => s + calcDurationHours(a.checkInTime, a.checkOutTime), 0);
+    report += `⏱️ Purata Jam: ${(totalHrs/completed.length).toFixed(1)}h\n`;
+  }
+
+  report += `\n📋 _DMP Pusat Pengajian_`;
+
+  // Format: replace \n with actual newlines for copy, keep * for WhatsApp bold
+  const plainReport = report.replace(/\\n/g, '\n');
+  const waUrl = `https://wa.me/?text=${encodeURIComponent(plainReport)}`;
+
+  // Try Web Share API first (mobile), fallback to copy + WhatsApp URL
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: 'DMP Attendance Report',
+        text: plainReport
+      });
+      return;
+    } catch (e) {
+      // User cancelled or not supported - fall through
+    }
+  }
+
+  // Fallback: copy to clipboard + ask to open WhatsApp
+  try {
+    await navigator.clipboard.writeText(plainReport);
+    showToast('Report copied! Opening WhatsApp...', 'success');
+    setTimeout(() => {
+      window.open(waUrl, '_blank');
+    }, 500);
+  } catch (e) {
+    // Manual fallback
+    showToast('Tap to share report 📤', 'success');
+    setTimeout(() => {
+      window.open(waUrl, '_blank');
+    }, 300);
+  }
+}
+
+document.getElementById('btn-export-report').addEventListener('click', exportDailyReport);
+
 // ─── Admin - Check-In ─────────────────────────────────────────
 function setupCheckIn() {
   document.getElementById('checkin-search').value = '';

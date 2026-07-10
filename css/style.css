@@ -322,6 +322,12 @@ body.student-mode {
   font-weight: 600;
 }
 
+.dashboard-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .date-badge {
   font-size: 12px;
   background: var(--primary);
