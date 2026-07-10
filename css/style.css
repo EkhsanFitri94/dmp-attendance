@@ -834,6 +834,100 @@ body.student-mode {
   background: var(--border);
 }
 
+.detail-photo {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin: 0 auto 12px;
+  display: block;
+  background: var(--border);
+}
+
+/* Student Attendance History in Modal */
+.detail-stats-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.detail-stats-section h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.detail-stats-section h5 {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 12px 0 6px;
+}
+
+.detail-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 6px;
+}
+
+.detail-stat {
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 8px 4px;
+  text-align: center;
+}
+
+.stat-num {
+  display: block;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.stat-label-sm {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.detail-last-att {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 8px;
+  padding: 6px 0;
+}
+
+.detail-label-sm {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.no-history {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 12px 0;
+}
+
+.detail-history-list {
+  margin-top: 4px;
+}
+
+.detail-history-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--bg);
+  color: var(--text-secondary);
+}
+
+.history-dur {
+  margin-left: auto;
+  font-weight: 600;
+  color: var(--text);
+}
+
 /* ===== TOAST ===== */
 .toast {
   position: fixed;

@@ -130,6 +130,15 @@ class AttendanceDB {
   getCurrentlyPresent() {
     return this.getTodayAttendance().then(all => all.filter(r => r.status==='present'));
   }
+
+  getStudentAttendanceHistory(studentId) {
+    return new Promise((resolve, reject) => {
+      const tx = this.db.transaction('attendance','readonly');
+      const req = tx.objectStore('attendance').index('studentId').getAll(studentId);
+      req.onsuccess = (e) => resolve(e.target.result||[]);
+      req.onerror = (e) => reject(e.target.error);
+    });
+  }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────
@@ -752,7 +761,68 @@ let currentDeleteId = null;
 async function showStudentDetail(sid) {
   const s = await db.getStudent(sid);
   if (!s) { showToast('Student not found','error'); return; }
-  document.getElementById('modal-detail-body').innerHTML = `${s.profilePicture?`<img src="${s.profilePicture}" alt="Photo" class="detail-photo">`:'<div style="text-align:center;font-size:48px;">👤</div>'}<div class="detail-grid"><span class="detail-label">Name</span><span class="detail-value">${escapeHtml(s.name)}</span><span class="detail-label">Age</span><span class="detail-value">${s.age||'-'}</span><span class="detail-label">Phone</span><span class="detail-value">${escapeHtml(s.phone||'-')}</span><span class="detail-label">Email</span><span class="detail-value">${escapeHtml(s.email||'-')}</span><span class="detail-label">Address</span><span class="detail-value">${escapeHtml(s.address||'-')}</span><span class="detail-label">Reason</span><span class="detail-value">${escapeHtml(s.reasonToJoin||'-')}</span><span class="detail-label">Registered</span><span class="detail-value">${formatDate(s.registeredAt)}</span></div>`;
+
+  // Get attendance history
+  const history = await db.getStudentAttendanceHistory(sid);
+  const completedSessions = history.filter(a => a.checkOutTime);
+  const totalHours = completedSessions.reduce((sum, a) => sum + calcDurationHours(a.checkInTime, a.checkOutTime), 0);
+  const avgHours = completedSessions.length > 0 ? (totalHours / completedSessions.length) : 0;
+  const lastAttendance = history.length > 0 ? history.sort((a,b) => new Date(b.checkInTime) - new Date(a.checkInTime))[0] : null;
+
+  // Sort newest first for history list
+  const sortedHistory = [...history].sort((a,b) => new Date(b.checkInTime) - new Date(a.checkInTime));
+  const recentHistory = sortedHistory.slice(0, 10); // Show last 10 sessions
+
+  let html = '';
+
+  // Photo
+  html += s.profilePicture
+    ? `<img src="${s.profilePicture}" alt="Photo" class="detail-photo">`
+    : '<div style="text-align:center;font-size:48px;">👤</div>';
+
+  // Personal info
+  html += '<div class="detail-grid">';
+  html += `<span class="detail-label">Name</span><span class="detail-value">${escapeHtml(s.name)}</span>`;
+  html += `<span class="detail-label">Age</span><span class="detail-value">${s.age||'-'}</span>`;
+  html += `<span class="detail-label">Phone</span><span class="detail-value">${escapeHtml(s.phone||'-')}</span>`;
+  html += `<span class="detail-label">Email</span><span class="detail-value">${escapeHtml(s.email||'-')}</span>`;
+  html += `<span class="detail-label">Address</span><span class="detail-value">${escapeHtml(s.address||'-')}</span>`;
+  html += `<span class="detail-label">Reason</span><span class="detail-value">${escapeHtml(s.reasonToJoin||'-')}</span>`;
+  html += `<span class="detail-label">Registered</span><span class="detail-value">${formatDate(s.registeredAt)}</span>`;
+  html += '</div>';
+
+  // Attendance stats
+  html += '<div class="detail-stats-section">';
+  html += '<h4>📊 Attendance History</h4>';
+  html += '<div class="detail-stats-grid">';
+  html += `<div class="detail-stat"><span class="stat-num">${history.length}</span><span class="stat-label-sm">Total Sesi</span></div>`;
+  html += `<div class="detail-stat"><span class="stat-num">${completedSessions.length}</span><span class="stat-label-sm">Completed</span></div>`;
+  html += `<div class="detail-stat"><span class="stat-num">${totalHours.toFixed(1)}h</span><span class="stat-label-sm">Total Jam</span></div>`;
+  html += `<div class="detail-stat"><span class="stat-num">${avgHours.toFixed(1)}h</span><span class="stat-label-sm">Purata/Sesi</span></div>`;
+  html += '</div>';
+
+  // Last attendance
+  if (lastAttendance) {
+    html += `<div class="detail-last-att"><span class="detail-label-sm">Terakhir Hadir:</span> ${formatDate(lastAttendance.checkInTime)} (${formatTime(lastAttendance.checkInTime)})</div>`;
+  }
+
+  // Recent sessions list
+  if (recentHistory.length > 0) {
+    html += '<div class="detail-history-list">';
+    html += '<h5>10 Sesi Terkini</h5>';
+    recentHistory.forEach(a => {
+      const statusIcon = a.status==='present' ? '🟢' : '✅';
+      const dur = a.checkOutTime ? calcDuration(a.checkInTime, a.checkOutTime) : 'Belum Check-out';
+      html += `<div class="detail-history-item"><span>${statusIcon}</span><span>${formatDate(a.checkInTime)}</span><span>${formatTime(a.checkInTime)} - ${a.checkOutTime?formatTime(a.checkOutTime):'--:--'}</span><span class="history-dur">${dur}</span></div>`;
+    });
+    html += '</div>';
+  } else {
+    html += '<p class="no-history">Tiada rekod kehadiran.</p>';
+  }
+
+  html += '</div>';
+
+  document.getElementById('modal-detail-body').innerHTML = html;
   currentDeleteId = sid;
   showModal('modal-student-detail');
 }
