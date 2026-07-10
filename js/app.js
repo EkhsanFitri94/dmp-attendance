@@ -116,8 +116,12 @@ class AttendanceDB {
   }
 
   getTodayAttendance() {
+    return this.getAttendanceByDate(getTodayDate());
+  }
+
+  getAttendanceByDate(date) {
     return new Promise((resolve, reject) => {
-      const req = this.db.transaction('attendance','readonly').objectStore('attendance').index('date').getAll(getTodayDate());
+      const req = this.db.transaction('attendance','readonly').objectStore('attendance').index('date').getAll(date);
       req.onsuccess = (e) => resolve(e.target.result||[]);
       req.onerror = (e) => reject(e.target.error);
     });
@@ -328,21 +332,35 @@ function resetRegistrationForm() {
 }
 
 // ─── Admin - Dashboard ────────────────────────────────────────
+// Track which date the dashboard is showing
+let dashboardViewDate = getTodayDate();
+
+function getDashboardDate() {
+  const picker = document.getElementById('dashboard-date');
+  return picker ? picker.value : getTodayDate();
+}
+
 async function loadDashboard() {
   if (!isAdminUnlocked()) return;
 
-  document.getElementById('today-date').textContent = new Date().toLocaleDateString('en-MY', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+  // Set date picker to today if not already set, then use its value
+  const picker = document.getElementById('dashboard-date');
+  if (!picker.value) picker.value = getTodayDate();
+  const viewDate = picker.value;
+  dashboardViewDate = viewDate;
+
+  const isToday = viewDate === getTodayDate();
 
   const students = await db.getStudents();
-  const todayAttendance = await db.getTodayAttendance();
-  const present = todayAttendance.filter(a => a.status==='present');
-  const completed = todayAttendance.filter(a => a.status==='completed');
+  const attendance = await db.getAttendanceByDate(viewDate);
+  const present = attendance.filter(a => a.status==='present');
+  const completed = attendance.filter(a => a.status==='completed');
 
   document.getElementById('stat-total-students').textContent = students.length;
-  document.getElementById('stat-checked-in').textContent = present.length;
+  document.getElementById('stat-checked-in').textContent = isToday ? present.length : attendance.length;
   document.getElementById('stat-checked-out').textContent = completed.length;
 
-  const withCheckout = todayAttendance.filter(a => a.checkOutTime);
+  const withCheckout = attendance.filter(a => a.checkOutTime);
   if (withCheckout.length > 0) {
     const totalHrs = withCheckout.reduce((s,a) => s+calcDurationHours(a.checkInTime,a.checkOutTime),0);
     document.getElementById('stat-avg-hours').textContent = (totalHrs/withCheckout.length).toFixed(1)+'h';
@@ -351,32 +369,37 @@ async function loadDashboard() {
   }
 
   const list = document.getElementById('today-attendance-list');
-  if (todayAttendance.length===0) {
-    list.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>No attendance records for today yet.</p></div>';
+  if (attendance.length===0) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><p>No attendance records for ${isToday ? 'today' : viewDate}.</p></div>`;
     return;
   }
 
-  list.innerHTML = todayAttendance.sort((a,b)=>new Date(b.checkInTime)-new Date(a.checkInTime)).map(a => {
-    const d = a.checkOutTime ? calcDuration(a.checkInTime,a.checkOutTime) : 'Present';
+  list.innerHTML = attendance.sort((a,b)=>new Date(b.checkInTime)-new Date(a.checkInTime)).map(a => {
+    const d = a.checkOutTime ? calcDuration(a.checkInTime,a.checkOutTime) : (isToday ? 'Present' : 'No check-out');
     return `<div class="attendance-item"><div class="item-left"><div class="item-avatar">👤</div><div class="item-info"><div class="item-name">${escapeHtml(a.studentName)}</div><div class="item-sub">In: ${formatTime(a.checkInTime)}${a.checkOutTime?' · Out: '+formatTime(a.checkOutTime):''}</div></div></div><div class="item-time"><span class="${a.status==='present'?'time-in':'time-out'}">${d}</span></div></div>`;
   }).join('');
 }
 
+// Date picker change handler
+document.getElementById('dashboard-date').addEventListener('change', loadDashboard);
+
 // ─── Export Daily Report for WhatsApp ─────────────────────────
 async function exportDailyReport() {
-  const todayAttendance = await db.getTodayAttendance();
-  if (todayAttendance.length === 0) {
-    showToast('No attendance records to export.', 'error');
+  const viewDate = getDashboardDate();
+  const attendance = await db.getAttendanceByDate(viewDate);
+  if (attendance.length === 0) {
+    showToast('No attendance records to export for this date.', 'error');
     return;
   }
 
   const now = new Date();
-  const dateStr = now.toLocaleDateString('en-MY', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  const displayDate = new Date(viewDate + 'T00:00:00');
+  const dateStr = displayDate.toLocaleDateString('en-MY', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
   const timeStr = now.toLocaleTimeString('en-MY', { hour:'2-digit', minute:'2-digit' });
 
-  const present = todayAttendance.filter(a => a.status === 'present');
-  const completed = todayAttendance.filter(a => a.status === 'completed');
-  const all = todayAttendance.sort((a,b) => new Date(a.checkInTime) - new Date(b.checkInTime));
+  const present = attendance.filter(a => a.status === 'present');
+  const completed = attendance.filter(a => a.status === 'completed');
+  const all = attendance.sort((a,b) => new Date(a.checkInTime) - new Date(b.checkInTime));
 
   let report = `📊 *DMP Attendance Report*\n`;
   report += `📅 ${dateStr}\n`;
@@ -395,7 +418,7 @@ async function exportDailyReport() {
   });
 
   report += `━━━━━━━━━━━━━━━━━━━━\n`;
-  report += `👥 Total: ${todayAttendance.length} pelajar\n`;
+  report += `👥 Total: ${attendance.length} pelajar\n`;
   report += `🟢 Masih Dalam Kelas: ${present.length}\n`;
   report += `✅ Checked Out: ${completed.length}\n`;
 
