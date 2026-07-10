@@ -1,6 +1,6 @@
 /* ============================================================
    DMP Attendance App - app.js
-   IndexedDB storage + dual-mode UI (student/admin)
+   IndexedDB + dual-mode + full BM/EN standardization
    ============================================================ */
 
 const DEFAULT_PIN = '1234';
@@ -35,8 +35,7 @@ class AttendanceDB {
   addStudent(data) {
     return new Promise((resolve, reject) => {
       const tx = this.db.transaction('students', 'readwrite');
-      const store = tx.objectStore('students');
-      const req = store.add({ ...data, registeredAt: new Date().toISOString() });
+      const req = tx.objectStore('students').add({ ...data, registeredAt: new Date().toISOString() });
       req.onsuccess = (e) => resolve(e.target.result);
       req.onerror = (e) => reject(e.target.error);
     });
@@ -44,9 +43,8 @@ class AttendanceDB {
 
   getStudents() {
     return new Promise((resolve, reject) => {
-      const tx = this.db.transaction('students', 'readonly');
-      const req = tx.objectStore('students').getAll();
-      req.onsuccess = (e) => resolve(e.target.result || []);
+      const req = this.db.transaction('students','readonly').objectStore('students').getAll();
+      req.onsuccess = (e) => resolve(e.target.result||[]);
       req.onerror = (e) => reject(e.target.error);
     });
   }
@@ -63,12 +61,10 @@ class AttendanceDB {
     return new Promise((resolve, reject) => {
       const tx = this.db.transaction('students','readwrite');
       const store = tx.objectStore('students');
-      const getReq = store.get(id);
-      getReq.onsuccess = (e) => {
+      store.get(id).onsuccess = (e) => {
         const existing = e.target.result;
-        if (!existing) { reject(new Error('Student not found')); return; }
-        const updated = { ...existing, ...data, id: id };
-        store.put(updated);
+        if (!existing) { reject(new Error('Pelajar tidak dijumpai')); return; }
+        store.put({ ...existing, ...data, id: id });
       };
       tx.oncomplete = () => resolve();
       tx.onerror = (e) => reject(e.target.error);
@@ -104,36 +100,44 @@ class AttendanceDB {
       const today = getTodayDate();
       const tx = this.db.transaction('attendance','readwrite');
       const store = tx.objectStore('attendance');
-      const idx = store.index('studentId_date');
-      const checkReq = idx.get([studentId, today]);
-      checkReq.onsuccess = (e) => {
-        if (e.target.result) { reject(new Error('Already checked in today')); return; }
-        const req = store.add({ studentId, studentName, date: today, checkInTime: new Date().toISOString(), checkOutTime: null, status: 'present' });
-        req.onsuccess = (e2) => resolve(e2.target.result);
-        req.onerror = (e2) => reject(e2.target.error);
+      store.index('studentId_date').get([studentId, today]).onsuccess = (e) => {
+        if (e.target.result) { reject(new Error('Pelajar sudah hadir hari ini')); return; }
+        store.add({ studentId, studentName, date: today, checkInTime: new Date().toISOString(), checkOutTime: null, status: 'present' })
+          .onsuccess = (e2) => resolve(e2.target.result);
       };
-      checkReq.onerror = (e) => reject(e.target.error);
+      tx.onerror = (e) => reject(e.target.error);
+    });
+  }
+
+  async removeCheckIn(studentId) {
+    const today = getTodayDate();
+    return new Promise((resolve, reject) => {
+      const tx = this.db.transaction('attendance','readwrite');
+      const idx = tx.objectStore('attendance').index('studentId_date');
+      idx.openCursor(IDBKeyRange.only([studentId, today])).onsuccess = (e) => {
+        const cursor = e.target.result;
+        if (cursor) { cursor.delete(); cursor.continue(); }
+      };
+      tx.oncomplete = () => resolve();
+      tx.onerror = (e) => reject(e.target.error);
     });
   }
 
   checkOut(attendanceId) {
     return new Promise((resolve, reject) => {
       const tx = this.db.transaction('attendance','readwrite');
-      const req = tx.objectStore('attendance').get(attendanceId);
-      req.onsuccess = (e) => {
+      tx.objectStore('attendance').get(attendanceId).onsuccess = (e) => {
         const r = e.target.result;
-        if (!r) { reject(new Error('Record not found')); return; }
-        if (r.checkOutTime) { reject(new Error('Already checked out')); return; }
+        if (!r) { reject(new Error('Rekod tidak dijumpai')); return; }
+        if (r.checkOutTime) { reject(new Error('Sudah check-out')); return; }
         r.checkOutTime = new Date().toISOString(); r.status = 'completed';
         tx.objectStore('attendance').put(r).onsuccess = () => resolve(r);
       };
-      req.onerror = (e) => reject(e.target.error);
+      tx.onerror = (e) => reject(e.target.error);
     });
   }
 
-  getTodayAttendance() {
-    return this.getAttendanceByDate(getTodayDate());
-  }
+  getTodayAttendance() { return this.getAttendanceByDate(getTodayDate()); }
 
   getAttendanceByDate(date) {
     return new Promise((resolve, reject) => {
@@ -143,14 +147,11 @@ class AttendanceDB {
     });
   }
 
-  getCurrentlyPresent() {
-    return this.getTodayAttendance().then(all => all.filter(r => r.status==='present'));
-  }
+  getCurrentlyPresent() { return this.getTodayAttendance().then(all => all.filter(r => r.status==='present')); }
 
   getStudentAttendanceHistory(studentId) {
     return new Promise((resolve, reject) => {
-      const tx = this.db.transaction('attendance','readonly');
-      const req = tx.objectStore('attendance').index('studentId').getAll(studentId);
+      const req = this.db.transaction('attendance','readonly').objectStore('attendance').index('studentId').getAll(studentId);
       req.onsuccess = (e) => resolve(e.target.result||[]);
       req.onerror = (e) => reject(e.target.error);
     });
@@ -162,54 +163,46 @@ function getTodayDate() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
 }
-
 function formatTime(iso) {
   if (!iso) return '--:--';
   return new Date(iso).toLocaleTimeString('en-MY', { hour:'2-digit', minute:'2-digit', hour12:true });
 }
-
 function formatDate(iso) {
   return new Date(iso).toLocaleDateString('en-MY', { day:'numeric', month:'short', year:'numeric' });
 }
-
 function calcDuration(cIn, cOut) {
   if (!cIn||!cOut) return '';
   const ms = new Date(cOut)-new Date(cIn);
   const h = Math.floor(ms/3600000), m = Math.floor((ms%3600000)/60000);
-  if (h===0) return `${m}m`; if (m===0) return `${h}h`; return `${h}h ${m}m`;
+  if (h===0) return `${m}m`; if (m===0) return `${h}j`; return `${h}j ${m}m`;
 }
-
 function calcDurationHours(cIn, cOut) {
   if (!cIn||!cOut) return 0;
   return (new Date(cOut)-new Date(cIn))/3600000;
 }
-
 function showToast(msg, type='') {
   const t = document.getElementById('toast');
   t.textContent = msg; t.className = `toast ${type}`;
-  t.classList.remove('hidden'); setTimeout(() => t.classList.add('hidden'), 2500);
+  t.classList.remove('hidden');
+  t.style.animation = 'none'; t.offsetHeight; t.style.animation = 'toastIn 0.3s ease-out';
+  setTimeout(() => t.classList.add('hidden'), 2800);
 }
-
 function hideAllModals() {
   document.getElementById('modal-overlay').classList.add('hidden');
   document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
 }
-
 function showModal(modalId) {
   document.getElementById('modal-overlay').classList.remove('hidden');
   document.getElementById(modalId).classList.remove('hidden');
 }
-
 function escapeHtml(str) {
   const d = document.createElement('div'); d.textContent = str; return d.innerHTML;
 }
 
 // ─── PIN Management ───────────────────────────────────────────
+let adminUnlocked = false;
 function getPin() { return localStorage.getItem('dmp_admin_pin') || DEFAULT_PIN; }
 function setPin(pin) { localStorage.setItem('dmp_admin_pin', pin); }
-
-// Admin state is in-memory only (resets every page load for security & to fix iOS issue)
-let adminUnlocked = false;
 function isAdminUnlocked() { return adminUnlocked; }
 function unlockAdmin() { adminUnlocked = true; }
 function lockAdmin() { adminUnlocked = false; }
@@ -221,7 +214,6 @@ function switchToAdminMode() {
   document.getElementById('admin-view').classList.remove('hidden');
   loadDashboard();
 }
-
 function switchToStudentMode() {
   lockAdmin();
   document.body.className = 'student-mode';
@@ -231,24 +223,19 @@ function switchToStudentMode() {
   resetRegistrationForm();
 }
 
-// ─── Student Registration (shared by both student & admin views) ──
-let studentPhotoData = null;
-let adminPhotoData = null;
-
+// ─── Reason selector helper ───────────────────────────────────
 function getReasonValue(selectId, otherId) {
   const select = document.getElementById(selectId);
-  if (select.value === 'other') {
-    return document.getElementById(otherId).value.trim() || 'Others';
-  }
+  if (select.value === 'other') return document.getElementById(otherId).value.trim() || 'Others';
   return select.value;
 }
-
 function toggleReasonOther(selectId, otherId) {
   const select = document.getElementById(selectId);
   const other = document.getElementById(otherId);
   if (select.value === 'other') {
     other.classList.remove('hidden');
     other.setAttribute('required', '');
+    setTimeout(() => other.focus(), 100);
   } else {
     other.classList.add('hidden');
     other.removeAttribute('required');
@@ -256,11 +243,13 @@ function toggleReasonOther(selectId, otherId) {
   }
 }
 
+// ─── Registration ─────────────────────────────────────────────
+let studentPhotoData = null;
+let adminPhotoData = null;
+
 function setupStudentRegistration() {
-  // Student view registration
   document.getElementById('photo-upload-area').addEventListener('click', () => document.getElementById('photo-input').click());
   document.getElementById('photo-input').addEventListener('change', function() { handlePhotoUpload(this, 'student'); });
-
   document.getElementById('register-form').addEventListener('submit', async function(e) {
     e.preventDefault();
     await doRegister({
@@ -272,13 +261,10 @@ function setupStudentRegistration() {
       reasonToJoin: getReasonValue('reg-reason', 'reg-reason-other'),
       profilePicture: studentPhotoData
     });
-    // On success in student view, show success card
   });
 
-  // Admin view registration
   document.getElementById('admin-photo-area').addEventListener('click', () => document.getElementById('admin-photo-input').click());
   document.getElementById('admin-photo-input').addEventListener('change', function() { handlePhotoUpload(this, 'admin'); });
-
   document.getElementById('admin-register-form').addEventListener('submit', async function(e) {
     e.preventDefault();
     await doRegister({
@@ -291,16 +277,12 @@ function setupStudentRegistration() {
       profilePicture: adminPhotoData
     });
     this.reset();
-    adminPhotoData = null;
-    resetAdminPhotoPreview();
+    adminPhotoData = null; resetAdminPhotoPreview();
     loadDashboard();
   });
 
-  // Toggle "other" reason textareas
   document.getElementById('reg-reason').addEventListener('change', () => toggleReasonOther('reg-reason', 'reg-reason-other'));
   document.getElementById('admin-reg-reason').addEventListener('change', () => toggleReasonOther('admin-reg-reason', 'admin-reg-reason-other'));
-
-  // Handle Enter key in "other" textareas to submit the form
   document.getElementById('reg-reason-other').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); document.getElementById('register-form').requestSubmit(); }
   });
@@ -309,62 +291,50 @@ function setupStudentRegistration() {
 function handlePhotoUpload(input, mode) {
   const file = input.files[0];
   if (!file) return;
-  if (file.size > 2*1024*1024) { showToast('Photo too large. Max 2MB.', 'error'); return; }
-
+  if (file.size > 2*1024*1024) { showToast('Gambar terlalu besar. Maksimum 2MB.', 'error'); return; }
   const reader = new FileReader();
   reader.onload = (e) => {
     const data = e.target.result;
-    if (mode==='student') {
-      studentPhotoData = data;
-      updatePhotoPreview('photo-preview', data);
-    } else {
-      adminPhotoData = data;
-      updatePhotoPreview('admin-photo-preview', data);
-    }
+    if (mode==='student') { studentPhotoData = data; updatePhotoPreview('photo-preview', data); }
+    else { adminPhotoData = data; updatePhotoPreview('admin-photo-preview', data); }
   };
   reader.readAsDataURL(file);
 }
-
 function updatePhotoPreview(previewId, dataUrl) {
   const preview = document.getElementById(previewId);
   preview.classList.add('has-photo');
   preview.innerHTML = `<img src="${dataUrl}" alt="Photo">`;
 }
-
 function resetPhotoPreview(previewId) {
   const preview = document.getElementById(previewId);
   preview.classList.remove('has-photo');
-  preview.innerHTML = '<span class="photo-placeholder">📷</span><span>Tap to add photo</span>';
+  preview.innerHTML = '<span class="photo-placeholder">📷</span><span>Tap untuk tambah gambar</span>';
 }
-
 function resetAdminPhotoPreview() { resetPhotoPreview('admin-photo-preview'); }
 
 async function doRegister(data) {
-  if (!data.name) { showToast('Name is required', 'error'); return; }
-  if (!data.reasonToJoin) { showToast('Reason to join is required', 'error'); return; }
-
+  if (!data.name) { showToast('Nama diperlukan', 'error'); return; }
+  if (!data.reasonToJoin) { showToast('Sebab sertai kelas diperlukan', 'error'); return; }
   try {
     await db.addStudent(data);
-    showToast(`${data.name} registered! ✅`, 'success');
-
     const isStudentView = document.body.classList.contains('student-mode');
     if (isStudentView) {
-      // Kiosk mode: show success briefly, then reset form for next student
       document.getElementById('register-form').classList.add('hidden');
-      document.getElementById('reg-success').classList.remove('hidden');
-      // Auto-reset after 3 seconds for next student
+      const success = document.getElementById('reg-success');
+      success.classList.remove('hidden');
+      success.style.animation = 'none'; success.offsetHeight; success.style.animation = 'fadeIn 0.4s ease-out';
       setTimeout(() => {
-        document.getElementById('reg-success').classList.add('hidden');
+        success.classList.add('hidden');
         document.getElementById('register-form').classList.remove('hidden');
         resetStudentRegistrationForm();
       }, 3000);
     } else {
-      // Admin side: reset immediately
       resetStudentRegistrationForm();
       loadDashboard();
     }
+    showToast(`${data.name} berjaya didaftarkan! 🎉`, 'success');
   } catch (err) {
-    showToast('Failed to register: ' + err.message, 'error');
+    showToast('Gagal mendaftar: ' + err.message, 'error');
   }
 }
 
@@ -373,79 +343,72 @@ document.getElementById('btn-register-another').addEventListener('click', () => 
   document.getElementById('register-form').classList.remove('hidden');
   resetStudentRegistrationForm();
 });
-
 function resetStudentRegistrationForm() {
   document.getElementById('register-form').reset();
-  studentPhotoData = null;
-  resetPhotoPreview('photo-preview');
+  studentPhotoData = null; resetPhotoPreview('photo-preview');
 }
-
 function resetRegistrationForm() {
   resetStudentRegistrationForm();
   document.getElementById('reg-success').classList.add('hidden');
   document.getElementById('register-form').classList.remove('hidden');
 }
 
-// ─── Admin - Dashboard ────────────────────────────────────────
-// Track which date the dashboard is showing
-let dashboardViewDate = getTodayDate();
-
-function getDashboardDate() {
-  const picker = document.getElementById('dashboard-date');
-  return picker ? picker.value : getTodayDate();
-}
-
+// ─── Dashboard ────────────────────────────────────────────────
 async function loadDashboard() {
   if (!isAdminUnlocked()) return;
-
-  // Set date picker to today if not already set, then use its value
   const picker = document.getElementById('dashboard-date');
   if (!picker.value) picker.value = getTodayDate();
   const viewDate = picker.value;
-  dashboardViewDate = viewDate;
-
   const isToday = viewDate === getTodayDate();
 
-  const students = await db.getStudents();
-  const attendance = await db.getAttendanceByDate(viewDate);
+  const [students, attendance] = await Promise.all([db.getStudents(), db.getAttendanceByDate(viewDate)]);
   const present = attendance.filter(a => a.status==='present');
   const completed = attendance.filter(a => a.status==='completed');
 
-  document.getElementById('stat-total-students').textContent = students.length;
-  document.getElementById('stat-checked-in').textContent = isToday ? present.length : attendance.length;
-  document.getElementById('stat-checked-out').textContent = completed.length;
+  // Animate stat values
+  animateValue('stat-total-students', parseInt(document.getElementById('stat-total-students').textContent)||0, students.length, 400);
+  animateValue('stat-checked-in', parseInt(document.getElementById('stat-checked-in').textContent)||0, isToday ? present.length : attendance.length, 400);
+  animateValue('stat-checked-out', parseInt(document.getElementById('stat-checked-out').textContent)||0, completed.length, 400);
 
   const withCheckout = attendance.filter(a => a.checkOutTime);
-  if (withCheckout.length > 0) {
-    const totalHrs = withCheckout.reduce((s,a) => s+calcDurationHours(a.checkInTime,a.checkOutTime),0);
-    document.getElementById('stat-avg-hours').textContent = (totalHrs/withCheckout.length).toFixed(1)+'h';
-  } else {
-    document.getElementById('stat-avg-hours').textContent = '0h';
-  }
+  const avgHrs = withCheckout.length>0 ? (withCheckout.reduce((s,a)=>s+calcDurationHours(a.checkInTime,a.checkOutTime),0)/withCheckout.length) : 0;
+  document.getElementById('stat-avg-hours').textContent = avgHrs.toFixed(1)+'j';
 
   const list = document.getElementById('today-attendance-list');
   if (attendance.length===0) {
-    list.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><p>No attendance records for ${isToday ? 'today' : viewDate}.</p></div>`;
+    list.innerHTML = `<div class="empty-state fade-in"><div class="empty-icon">📭</div><p>${isToday ? 'Tiada rekod kehadiran untuk hari ini.' : 'Tiada rekod kehadiran untuk ' + viewDate + '.'}</p></div>`;
     return;
   }
 
-  list.innerHTML = attendance.sort((a,b)=>new Date(b.checkInTime)-new Date(a.checkInTime)).map(a => {
-    const d = a.checkOutTime ? calcDuration(a.checkInTime,a.checkOutTime) : (isToday ? 'Present' : 'No check-out');
-    return `<div class="attendance-item"><div class="item-left"><div class="item-avatar">👤</div><div class="item-info"><div class="item-name">${escapeHtml(a.studentName)}</div><div class="item-sub">In: ${formatTime(a.checkInTime)}${a.checkOutTime?' · Out: '+formatTime(a.checkOutTime):''}</div></div></div><div class="item-time"><span class="${a.status==='present'?'time-in':'time-out'}">${d}</span></div></div>`;
+  list.innerHTML = attendance.sort((a,b)=>new Date(b.checkInTime)-new Date(a.checkInTime)).map((a,i) => {
+    const d = a.checkOutTime ? calcDuration(a.checkInTime,a.checkOutTime) : (isToday ? 'Hadir' : 'Tiada check-out');
+    return `<div class="attendance-item fade-in" style="animation-delay:${i*40}ms"><div class="item-left"><div class="item-avatar">👤</div><div class="item-info"><div class="item-name">${escapeHtml(a.studentName)}</div><div class="item-sub">Masuk: ${formatTime(a.checkInTime)}${a.checkOutTime?' · Keluar: '+formatTime(a.checkOutTime):''}</div></div></div><div class="item-time"><span class="${a.status==='present'?'time-in':'time-out'}">${d}</span></div></div>`;
   }).join('');
 }
 
-// Date picker change handler
+function animateValue(elId, start, end, duration) {
+  const el = document.getElementById(elId);
+  if (start === end) { el.textContent = end; return; }
+  const range = end - start;
+  const startTime = performance.now();
+  function step(t) {
+    const elapsed = t - startTime;
+    const progress = Math.min(elapsed/duration, 1);
+    const eased = 1 - Math.pow(1-progress, 3);
+    el.textContent = Math.round(start + range * eased);
+    if (progress < 1) requestAnimationFrame(step);
+    else el.textContent = end;
+  }
+  requestAnimationFrame(step);
+}
+
 document.getElementById('dashboard-date').addEventListener('change', loadDashboard);
 
-// ─── Export Daily Report for WhatsApp ─────────────────────────
+// ─── Export Report ────────────────────────────────────────────
 async function exportDailyReport() {
-  const viewDate = getDashboardDate();
+  const viewDate = document.getElementById('dashboard-date').value;
   const attendance = await db.getAttendanceByDate(viewDate);
-  if (attendance.length === 0) {
-    showToast('No attendance records to export for this date.', 'error');
-    return;
-  }
+  if (attendance.length === 0) { showToast('Tiada rekod untuk tarikh ini.', 'error'); return; }
 
   const now = new Date();
   const displayDate = new Date(viewDate + 'T00:00:00');
@@ -456,197 +419,111 @@ async function exportDailyReport() {
   const completed = attendance.filter(a => a.status === 'completed');
   const all = attendance.sort((a,b) => new Date(a.checkInTime) - new Date(b.checkInTime));
 
-  let report = `📊 *DMP Attendance Report*\n`;
-  report += `📅 ${dateStr}\n`;
-  report += `🕐 Generated: ${timeStr}\n`;
-  report += `━━━━━━━━━━━━━━━━━━━━\n`;
-
+  let report = `📊 *Laporan Kehadiran DMP*\n📅 ${dateStr}\n🕐 Dijana: ${timeStr}\n━━━━━━━━━━━━━━━━━━━━\n`;
   all.forEach((a, i) => {
-    const statusIcon = a.status === 'present' ? '🟢' : '✅';
-    const duration = a.checkOutTime
-      ? ` (${calcDuration(a.checkInTime, a.checkOutTime)})`
-      : ' - *Masih Dalam Kelas*';
-    const inTime = formatTime(a.checkInTime);
-    const outTime = a.checkOutTime ? formatTime(a.checkOutTime) : '----';
-    report += `${statusIcon} ${i+1}. ${a.studentName}\n`;
-    report += `   In: ${inTime} | Out: ${outTime}${duration}\n`;
+    const icon = a.status === 'present' ? '🟢' : '✅';
+    const dur = a.checkOutTime ? ` (${calcDuration(a.checkInTime, a.checkOutTime)})` : ' - *Masih Dalam Kelas*';
+    report += `${icon} ${i+1}. ${a.studentName}\n   Masuk: ${formatTime(a.checkInTime)} | Keluar: ${a.checkOutTime ? formatTime(a.checkOutTime) : '----'}${dur}\n`;
   });
-
-  report += `━━━━━━━━━━━━━━━━━━━━\n`;
-  report += `👥 Total: ${attendance.length} pelajar\n`;
-  report += `🟢 Masih Dalam Kelas: ${present.length}\n`;
-  report += `✅ Checked Out: ${completed.length}\n`;
-
+  report += `━━━━━━━━━━━━━━━━━━━━\n👥 Jumlah: ${attendance.length} pelajar\n🟢 Dalam Kelas: ${present.length}\n✅ Checked Out: ${completed.length}\n`;
   if (completed.length > 0) {
-    const totalHrs = completed.reduce((s,a) => s + calcDurationHours(a.checkInTime, a.checkOutTime), 0);
-    report += `⏱️ Purata Jam: ${(totalHrs/completed.length).toFixed(1)}h\n`;
+    const tHrs = completed.reduce((s,a) => s + calcDurationHours(a.checkInTime, a.checkOutTime), 0);
+    report += `⏱️ Purata: ${(tHrs/completed.length).toFixed(1)}j\n`;
   }
+  report += `\n📋 DMP Pusat Pengajian`;
 
-  report += `\n📋 _DMP Pusat Pengajian_`;
-
-  // Format: replace \n with actual newlines for copy, keep * for WhatsApp bold
-  const plainReport = report.replace(/\\n/g, '\n');
-  const waUrl = `https://wa.me/?text=${encodeURIComponent(plainReport)}`;
-
-  // Try Web Share API first (mobile), fallback to copy + WhatsApp URL
-  if (navigator.share) {
-    try {
-      await navigator.share({
-        title: 'DMP Attendance Report',
-        text: plainReport
-      });
-      return;
-    } catch (e) {
-      // User cancelled or not supported - fall through
-    }
-  }
-
-  // Fallback: copy to clipboard + ask to open WhatsApp
+  const plain = report.replace(/\\n/g, '\n');
+  if (navigator.share) { try { await navigator.share({ title: 'Laporan DMP', text: plain }); return; } catch(e) {} }
   try {
-    await navigator.clipboard.writeText(plainReport);
-    showToast('Report copied! Opening WhatsApp...', 'success');
-    setTimeout(() => {
-      window.open(waUrl, '_blank');
-    }, 500);
-  } catch (e) {
-    // Manual fallback
-    showToast('Tap to share report 📤', 'success');
-    setTimeout(() => {
-      window.open(waUrl, '_blank');
-    }, 300);
+    await navigator.clipboard.writeText(plain);
+    showToast('Laporan disalin! Membuka WhatsApp...', 'success');
+    setTimeout(() => window.open(`https://wa.me/?text=${encodeURIComponent(plain)}`, '_blank'), 500);
+  } catch(e) {
+    showToast('Buka WhatsApp untuk kongsi laporan 📤', 'success');
+    setTimeout(() => window.open(`https://wa.me/?text=${encodeURIComponent(plain)}`, '_blank'), 300);
   }
 }
-
 document.getElementById('btn-export-report').addEventListener('click', exportDailyReport);
 
 // ─── Backup & Restore ─────────────────────────────────────────
 async function backupAllData() {
   try {
     const students = await db.getStudents();
-    // Get all attendance across all dates
-    const tx = db.db.transaction('attendance', 'readonly');
-    const allAtt = await new Promise((resolve, reject) => {
-      const req = tx.objectStore('attendance').getAll();
-      req.onsuccess = (e) => resolve(e.target.result || []);
-      req.onerror = (e) => reject(e.target.error);
+    const allAtt = await new Promise((res, rej) => {
+      const req = db.db.transaction('attendance','readonly').objectStore('attendance').getAll();
+      req.onsuccess = (e) => res(e.target.result||[]);
+      req.onerror = (e) => rej(e.target.error);
     });
-
-    const backup = {
-      version: 1,
-      exportedAt: new Date().toISOString(),
-      students: students,
-      attendance: allAtt
-    };
-
+    const backup = { version: 1, exportedAt: new Date().toISOString(), students, attendance: allAtt };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     const now = new Date();
-    const fname = `dmp-backup-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.json`;
-    a.href = url;
-    a.download = fname;
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast(`Backup saved! (${students.length} students, ${allAtt.length} records) 📦`, 'success');
-  } catch (err) {
-    showToast('Backup failed: ' + err.message, 'error');
-  }
+    a.href = url; a.download = `dmp-backup-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.json`;
+    a.click(); URL.revokeObjectURL(url);
+    showToast(`Backup disimpan! (${students.length} pelajar, ${allAtt.length} rekod) 📦`, 'success');
+  } catch (err) { showToast('Backup gagal: ' + err.message, 'error'); }
 }
 
 async function restoreAllData(file) {
   try {
     const text = await file.text();
     const backup = JSON.parse(text);
-    if (!backup.students || !backup.attendance) {
-      throw new Error('Invalid backup file');
-    }
+    if (!backup.students || !backup.attendance) throw new Error('Fail backup tidak sah');
+    if (!confirm(`Pulihkan ${backup.students.length} pelajar dan ${backup.attendance.length} rekod kehadiran?\n\n⚠️ AMARAN: Ini akan menggantikan SEMUA data sedia ada.`)) return;
 
-    if (!confirm(`Restore ${backup.students.length} students and ${backup.attendance.length} attendance records?\n\nWARNING: This will replace ALL existing data.`)) {
-      return;
-    }
-
-    // Clear existing data
-    await new Promise((resolve, reject) => {
-      const tx = db.db.transaction(['students', 'attendance'], 'readwrite');
+    await new Promise((res, rej) => {
+      const tx = db.db.transaction(['students','attendance'], 'readwrite');
       tx.objectStore('students').clear();
       tx.objectStore('attendance').clear();
-      tx.oncomplete = () => resolve();
-      tx.onerror = (e) => reject(e.target.error);
+      tx.oncomplete = () => res(); tx.onerror = (e) => rej(e.target.error);
     });
-
-    // Restore students (preserve original IDs)
-    await new Promise((resolve, reject) => {
-      const tx = db.db.transaction('students', 'readwrite');
-      const store = tx.objectStore('students');
-      for (const s of backup.students) {
-        store.put(s); // put preserves id
-      }
-      tx.oncomplete = () => resolve();
-      tx.onerror = (e) => reject(e.target.error);
+    await new Promise((res, rej) => {
+      const tx = db.db.transaction('students','readwrite');
+      for (const s of backup.students) tx.objectStore('students').put(s);
+      tx.oncomplete = () => res(); tx.onerror = (e) => rej(e.target.error);
     });
-
-    // Restore attendance
-    await new Promise((resolve, reject) => {
-      const tx = db.db.transaction('attendance', 'readwrite');
-      const store = tx.objectStore('attendance');
-      for (const a of backup.attendance) {
-        store.put(a);
-      }
-      tx.oncomplete = () => resolve();
-      tx.onerror = (e) => reject(e.target.error);
+    await new Promise((res, rej) => {
+      const tx = db.db.transaction('attendance','readwrite');
+      for (const a of backup.attendance) tx.objectStore('attendance').put(a);
+      tx.oncomplete = () => res(); tx.onerror = (e) => rej(e.target.error);
     });
-
-    showToast(`Restored ${backup.students.length} students, ${backup.attendance.length} records ✅`, 'success');
+    showToast(`Dipulihkan: ${backup.students.length} pelajar, ${backup.attendance.length} rekod ✅`, 'success');
     loadDashboard();
-  } catch (err) {
-    showToast('Restore failed: ' + err.message, 'error');
-  }
+  } catch (err) { showToast('Pulih gagal: ' + err.message, 'error'); }
 }
-
 document.getElementById('btn-backup-data').addEventListener('click', backupAllData);
-document.getElementById('btn-restore-data').addEventListener('click', () => {
-  document.getElementById('restore-file-input').click();
-});
+document.getElementById('btn-restore-data').addEventListener('click', () => document.getElementById('restore-file-input').click());
 document.getElementById('restore-file-input').addEventListener('change', function() {
-  if (this.files[0]) {
-    restoreAllData(this.files[0]);
-    this.value = '';
-  }
+  if (this.files[0]) { restoreAllData(this.files[0]); this.value = ''; }
 });
 
-// ─── Admin - Check-In ─────────────────────────────────────────
+// ─── Check-In ─────────────────────────────────────────────────
 let checkInAllStudents = [];
 let checkInTodayIds = new Set();
 
 async function setupCheckIn() {
   document.getElementById('checkin-search').value = '';
-  checkInAllStudents = await db.getStudents();
-  const todayAtt = await db.getTodayAttendance();
-  checkInTodayIds = new Set(todayAtt.map(a => a.studentId));
+  [checkInAllStudents, checkInTodayIds] = await Promise.all([
+    db.getStudents(),
+    db.getTodayAttendance().then(a => new Set(a.map(r => r.studentId)))
+  ]);
   renderCheckInList();
 }
 
 function renderCheckInList(filterQuery = '') {
   const q = filterQuery.toLowerCase().trim();
-  let students = q
-    ? checkInAllStudents.filter(s => s.name.toLowerCase().includes(q) || (s.phone && s.phone.includes(q)))
-    : checkInAllStudents;
-
-  // Sort: not checked in first, then alphabetical
+  let students = q ? checkInAllStudents.filter(s => s.name.toLowerCase().includes(q) || (s.phone&&s.phone.includes(q))) : checkInAllStudents;
   students = [...students].sort((a, b) => {
-    const aIn = checkInTodayIds.has(a.id);
-    const bIn = checkInTodayIds.has(b.id);
-    if (aIn && !bIn) return 1;
-    if (!aIn && bIn) return -1;
-    return a.name.localeCompare(b.name);
+    const aIn = checkInTodayIds.has(a.id), bIn = checkInTodayIds.has(b.id);
+    if (aIn && !bIn) return 1; if (!aIn && bIn) return -1; return a.name.localeCompare(b.name);
   });
 
   const div = document.getElementById('checkin-results');
-
   if (students.length === 0) {
     div.innerHTML = q
-      ? `<div class="empty-state"><div class="empty-icon">🔎</div><p>No students found matching "${escapeHtml(q)}"</p></div>`
-      : '<div class="empty-state"><div class="empty-icon">📝</div><p>No students registered yet. Go to Register tab first.</p></div>';
+      ? `<div class="empty-state fade-in"><div class="empty-icon">🔎</div><p>Tiada pelajar dijumpai: "${escapeHtml(q)}"</p></div>`
+      : '<div class="empty-state fade-in"><div class="empty-icon">📝</div><p>Tiada pelajar berdaftar. Daftar dahulu di tab Register.</p></div>';
     return;
   }
 
@@ -655,33 +532,32 @@ function renderCheckInList(filterQuery = '') {
 
   let html = '';
   if (notCheckedIn.length > 0) {
-    html += `<div class="checkin-group-label">⬜ Belum Check-In (${notCheckedIn.length})</div>`;
-    html += notCheckedIn.map(s => {
-      return `<div class="student-item"><div class="item-left"><div class="item-avatar">${s.profilePicture ? `<img src="${s.profilePicture}" alt="">` : '👤'}</div><div class="item-info"><div class="item-name">${escapeHtml(s.name)}</div><div class="item-sub">${s.age ? s.age + ' yrs' : ''}${s.phone ? ' · ' + escapeHtml(s.phone) : ''}</div></div></div><div class="item-actions"><button class="btn btn-success btn-sm btn-checkin" data-id="${s.id}" data-name="${escapeHtml(s.name)}">Check In</button></div></div>`;
+    html += `<div class="checkin-group-label">⬜ Belum Hadir (${notCheckedIn.length})</div>`;
+    html += notCheckedIn.map((s,i) => {
+      return `<div class="student-item fade-in" style="animation-delay:${i*30}ms"><div class="item-left"><div class="item-avatar">${s.profilePicture ? `<img src="${s.profilePicture}" alt="">` : '👤'}</div><div class="item-info"><div class="item-name">${escapeHtml(s.name)}</div><div class="item-sub">${s.age ? s.age + ' thn' : ''}${s.phone ? ' · ' + escapeHtml(s.phone) : ''}</div></div></div><div class="item-actions"><button class="btn btn-checkin-pulse btn-sm" data-id="${s.id}" data-name="${escapeHtml(s.name)}">✅ Hadir</button></div></div>`;
     }).join('');
   }
-
   if (checkedIn.length > 0) {
-    html += `<div class="checkin-group-label checkin-done-label">✅ Dah Check-In (${checkedIn.length})</div>`;
-    html += checkedIn.map(s => {
-      return `<div class="student-item checkin-done-item"><div class="item-left"><div class="item-avatar">${s.profilePicture ? `<img src="${s.profilePicture}" alt="">` : '👤'}</div><div class="item-info"><div class="item-name">${escapeHtml(s.name)}</div><div class="item-sub">${s.age ? s.age + ' yrs' : ''}${s.phone ? ' · ' + escapeHtml(s.phone) : ''}</div></div></div><div class="item-actions"><span class="checkin-done-badge">✅ Done</span></div></div>`;
+    html += `<div class="checkin-group-label checkin-done-label">✅ Dah Hadir (${checkedIn.length})</div>`;
+    html += checkedIn.map((s,i) => {
+      return `<div class="student-item checkin-done-item fade-in" style="animation-delay:${i*30}ms"><div class="item-left"><div class="item-avatar">${s.profilePicture ? `<img src="${s.profilePicture}" alt="">` : '👤'}</div><div class="item-info"><div class="item-name">${escapeHtml(s.name)}</div><div class="item-sub">${s.age ? s.age + ' thn' : ''}${s.phone ? ' · ' + escapeHtml(s.phone) : ''}</div></div></div><div class="item-actions"><button class="btn btn-undo btn-sm" data-id="${s.id}" data-name="${escapeHtml(s.name)}">↩ Batal</button></div></div>`;
     }).join('');
   }
 
   div.innerHTML = html;
-
-  div.querySelectorAll('.btn-checkin').forEach(btn => {
+  div.querySelectorAll('.btn-checkin-pulse').forEach(btn => {
     btn.addEventListener('click', () => showCheckInConfirm(parseInt(btn.dataset.id), btn.dataset.name));
+  });
+  div.querySelectorAll('.btn-undo').forEach(btn => {
+    btn.addEventListener('click', () => undoCheckIn(parseInt(btn.dataset.id), btn.dataset.name));
   });
 }
 
-document.getElementById('checkin-search').addEventListener('input', function() {
-  renderCheckInList(this.value);
-});
+document.getElementById('checkin-search').addEventListener('input', function() { renderCheckInList(this.value); });
 
 function showCheckInConfirm(sid, name) {
   const now = new Date();
-  document.getElementById('modal-checkin-body').innerHTML = `<p style="text-align:center;font-size:15px;">Check in <strong>${name}</strong>?</p><p style="text-align:center;color:var(--text-secondary);font-size:13px;">Time: ${now.toLocaleTimeString('en-MY',{hour:'2-digit',minute:'2-digit'})}<br>Date: ${now.toLocaleDateString('en-MY',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</p>`;
+  document.getElementById('modal-checkin-body').innerHTML = `<div class="confirm-card"><div class="confirm-icon">✅</div><p class="confirm-name">${escapeHtml(name)}</p><p class="confirm-detail">${now.toLocaleTimeString('en-MY',{hour:'2-digit',minute:'2-digit'})}<br><small>${now.toLocaleDateString('en-MY',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</small></p></div>`;
   document.getElementById('btn-confirm-checkin').onclick = () => performCheckIn(sid, name);
   showModal('modal-confirm-checkin');
 }
@@ -690,8 +566,7 @@ async function performCheckIn(sid, name) {
   try {
     await db.checkIn(sid, name);
     hideAllModals();
-    showToast(`${name} checked in! ✅`, 'success');
-    // Refresh check-in list
+    showToast(`${name} hadir! ✅`, 'success');
     checkInTodayIds.add(sid);
     renderCheckInList(document.getElementById('checkin-search').value);
     loadDashboard();
@@ -700,33 +575,38 @@ async function performCheckIn(sid, name) {
   }
 }
 
-// ─── Admin - Check-Out ────────────────────────────────────────
+async function undoCheckIn(sid, name) {
+  if (!confirm(`Batal kehadiran ${name}?`)) return;
+  try {
+    await db.removeCheckIn(sid);
+    showToast(`Kehadiran ${name} dibatalkan ↩`, 'success');
+    checkInTodayIds.delete(sid);
+    renderCheckInList(document.getElementById('checkin-search').value);
+    loadDashboard();
+  } catch (err) { showToast('Gagal batal: ' + err.message, 'error'); }
+}
+
+// ─── Check-Out ────────────────────────────────────────────────
 async function loadCheckOut() {
   const present = await db.getCurrentlyPresent();
   document.getElementById('checkout-count').textContent = present.length;
   const list = document.getElementById('checkout-list');
-
   if (present.length===0) {
-    list.innerHTML = '<div class="empty-state"><div class="empty-icon">🏠</div><p>No one is currently checked in.</p></div>';
+    list.innerHTML = '<div class="empty-state fade-in"><div class="empty-icon">🏠</div><p>Tiada pelajar sedang hadir.</p></div>';
     return;
   }
-
-  list.innerHTML = present.map(a => {
+  list.innerHTML = present.map((a,i) => {
     const dur = calcDuration(a.checkInTime, new Date().toISOString());
-    return `<div class="attendance-item"><div class="item-left"><div class="item-avatar">👤</div><div class="item-info"><div class="item-name">${escapeHtml(a.studentName)}</div><div class="item-sub">Since: ${formatTime(a.checkInTime)} · ${dur}</div></div></div><div class="item-actions"><button class="btn btn-danger btn-sm btn-checkout" data-id="${a.id}" data-name="${escapeHtml(a.studentName)}">Check Out</button></div></div>`;
+    return `<div class="attendance-item fade-in" style="animation-delay:${i*40}ms"><div class="item-left"><div class="item-avatar pulse-dot"></div><div class="item-info"><div class="item-name">${escapeHtml(a.studentName)}</div><div class="item-sub">Sejak: ${formatTime(a.checkInTime)} · ${dur}</div></div></div><div class="item-actions"><button class="btn btn-danger btn-sm btn-checkout" data-id="${a.id}" data-name="${escapeHtml(a.studentName)}">🚪 Keluar</button></div></div>`;
   }).join('');
-
   list.querySelectorAll('.btn-checkout').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const aid = parseInt(btn.dataset.id);
-      showCheckOutConfirm(aid, btn.dataset.name);
-    });
+    btn.addEventListener('click', () => showCheckOutConfirm(parseInt(btn.dataset.id), btn.dataset.name));
   });
 }
 
 function showCheckOutConfirm(aid, name) {
   const now = new Date();
-  document.getElementById('modal-checkout-body').innerHTML = `<p style="text-align:center;font-size:15px;">Check out <strong>${name}</strong>?</p><p style="text-align:center;color:var(--text-secondary);font-size:13px;">Time: ${now.toLocaleTimeString('en-MY',{hour:'2-digit',minute:'2-digit'})}</p>`;
+  document.getElementById('modal-checkout-body').innerHTML = `<div class="confirm-card"><div class="confirm-icon">🚪</div><p class="confirm-name">${escapeHtml(name)}</p><p class="confirm-detail">Check-out pada ${now.toLocaleTimeString('en-MY',{hour:'2-digit',minute:'2-digit'})}</p></div>`;
   document.getElementById('btn-confirm-checkout').onclick = () => performCheckOut(aid, name);
   showModal('modal-confirm-checkout');
 }
@@ -735,15 +615,13 @@ async function performCheckOut(aid, name) {
   try {
     await db.checkOut(aid);
     hideAllModals();
-    showToast(`${name} checked out! 🚪`, 'success');
+    showToast(`${name} telah keluar! 🚪`, 'success');
     await loadCheckOut();
     loadDashboard();
-  } catch (err) {
-    hideAllModals(); showToast(err.message, 'error');
-  }
+  } catch (err) { hideAllModals(); showToast(err.message, 'error'); }
 }
 
-// ─── Admin - Students List ────────────────────────────────────
+// ─── Students List ────────────────────────────────────────────
 async function loadStudents() {
   const q = document.getElementById('students-search').value.trim();
   const students = q ? await db.searchStudents(q) : await db.getStudents();
@@ -752,90 +630,72 @@ async function loadStudents() {
   const list = document.getElementById('students-list');
 
   if (students.length===0) {
-    list.innerHTML = q ? '<div class="empty-state"><div class="empty-icon">🔎</div><p>No students found.</p></div>' : '<div class="empty-state"><div class="empty-icon">📝</div><p>No students registered yet.</p></div>';
+    list.innerHTML = q ? '<div class="empty-state fade-in"><div class="empty-icon">🔎</div><p>Tiada pelajar dijumpai.</p></div>' : '<div class="empty-state fade-in"><div class="empty-icon">📝</div><p>Tiada pelajar berdaftar lagi.</p></div>';
     return;
   }
 
-  list.innerHTML = students.sort((a,b)=>a.name.localeCompare(b.name)).map(s => {
+  list.innerHTML = students.sort((a,b)=>a.name.localeCompare(b.name)).map((s,i) => {
     const rec = todayMap.get(s.id);
     let badge = '';
-    if (rec&&rec.status==='present') badge = '<span class="count-badge" style="background:var(--green-light);color:var(--green);">Present</span>';
-    else if (rec&&rec.status==='completed') badge = '<span class="count-badge" style="background:var(--red-light);color:var(--red);">Done</span>';
-    else badge = '<span class="count-badge" style="background:var(--bg);color:var(--text-muted);">Absent</span>';
-    return `<div class="student-item student-detail-trigger" data-id="${s.id}"><div class="item-left"><div class="item-avatar">${s.profilePicture?`<img src="${s.profilePicture}" alt="">`:'👤'}</div><div class="item-info"><div class="item-name">${escapeHtml(s.name)}</div><div class="item-sub">${s.phone?escapeHtml(s.phone)+' · ':''}${s.age?s.age+'yrs':''}</div></div></div>${badge}</div>`;
+    if (rec&&rec.status==='present') badge = '<span class="count-badge" style="background:var(--green-light);color:var(--green);">Hadir</span>';
+    else if (rec&&rec.status==='completed') badge = '<span class="count-badge" style="background:var(--red-light);color:var(--red);">Selesai</span>';
+    else badge = '<span class="count-badge" style="background:var(--bg);color:var(--text-muted);">Tidak Hadir</span>';
+    return `<div class="student-item student-detail-trigger fade-in" data-id="${s.id}" style="animation-delay:${i*30}ms;cursor:pointer;"><div class="item-left"><div class="item-avatar">${s.profilePicture?`<img src="${s.profilePicture}" alt="">`:'👤'}</div><div class="item-info"><div class="item-name">${escapeHtml(s.name)}</div><div class="item-sub">${s.phone?escapeHtml(s.phone)+' · ':''}${s.age?s.age+' thn':''}</div></div></div>${badge}</div>`;
   }).join('');
 
   list.querySelectorAll('.student-detail-trigger').forEach(item => {
     item.addEventListener('click', () => showStudentDetail(parseInt(item.dataset.id)));
   });
 }
-
 document.getElementById('students-search').addEventListener('input', loadStudents);
 
 let currentDeleteId = null;
 
 async function showStudentDetail(sid) {
   const s = await db.getStudent(sid);
-  if (!s) { showToast('Student not found','error'); return; }
+  if (!s) { showToast('Pelajar tidak dijumpai', 'error'); return; }
 
-  // Get attendance history
   const history = await db.getStudentAttendanceHistory(sid);
   const completedSessions = history.filter(a => a.checkOutTime);
   const totalHours = completedSessions.reduce((sum, a) => sum + calcDurationHours(a.checkInTime, a.checkOutTime), 0);
   const avgHours = completedSessions.length > 0 ? (totalHours / completedSessions.length) : 0;
-  const lastAttendance = history.length > 0 ? history.sort((a,b) => new Date(b.checkInTime) - new Date(a.checkInTime))[0] : null;
-
-  // Sort newest first for history list
   const sortedHistory = [...history].sort((a,b) => new Date(b.checkInTime) - new Date(a.checkInTime));
-  const recentHistory = sortedHistory.slice(0, 10); // Show last 10 sessions
+  const lastAttendance = sortedHistory[0] || null;
+  const recentHistory = sortedHistory.slice(0, 10);
 
   let html = '';
-
-  // Photo
-  html += s.profilePicture
-    ? `<img src="${s.profilePicture}" alt="Photo" class="detail-photo">`
-    : '<div style="text-align:center;font-size:48px;">👤</div>';
-
-  // Personal info
+  html += s.profilePicture ? `<img src="${s.profilePicture}" alt="Photo" class="detail-photo">` : '<div style="text-align:center;font-size:48px;">👤</div>';
   html += '<div class="detail-grid">';
-  html += `<span class="detail-label">Name</span><span class="detail-value">${escapeHtml(s.name)}</span>`;
-  html += `<span class="detail-label">Age</span><span class="detail-value">${s.age||'-'}</span>`;
-  html += `<span class="detail-label">Phone</span><span class="detail-value">${escapeHtml(s.phone||'-')}</span>`;
+  html += `<span class="detail-label">Nama</span><span class="detail-value">${escapeHtml(s.name)}</span>`;
+  html += `<span class="detail-label">Umur</span><span class="detail-value">${s.age||'-'}</span>`;
+  html += `<span class="detail-label">Telefon</span><span class="detail-value">${escapeHtml(s.phone||'-')}</span>`;
   html += `<span class="detail-label">Email</span><span class="detail-value">${escapeHtml(s.email||'-')}</span>`;
-  html += `<span class="detail-label">Address</span><span class="detail-value">${escapeHtml(s.address||'-')}</span>`;
-  html += `<span class="detail-label">Reason</span><span class="detail-value">${escapeHtml(s.reasonToJoin||'-')}</span>`;
-  html += `<span class="detail-label">Registered</span><span class="detail-value">${formatDate(s.registeredAt)}</span>`;
+  html += `<span class="detail-label">Alamat</span><span class="detail-value">${escapeHtml(s.address||'-')}</span>`;
+  html += `<span class="detail-label">Sebab</span><span class="detail-value">${escapeHtml(s.reasonToJoin||'-')}</span>`;
+  html += `<span class="detail-label">Didaftar</span><span class="detail-value">${formatDate(s.registeredAt)}</span>`;
   html += '</div>';
 
-  // Attendance stats
-  html += '<div class="detail-stats-section">';
-  html += '<h4>📊 Attendance History</h4>';
+  html += '<div class="detail-stats-section"><h4>📊 Sejarah Kehadiran</h4>';
   html += '<div class="detail-stats-grid">';
-  html += `<div class="detail-stat"><span class="stat-num">${history.length}</span><span class="stat-label-sm">Total Sesi</span></div>`;
-  html += `<div class="detail-stat"><span class="stat-num">${completedSessions.length}</span><span class="stat-label-sm">Completed</span></div>`;
-  html += `<div class="detail-stat"><span class="stat-num">${totalHours.toFixed(1)}h</span><span class="stat-label-sm">Total Jam</span></div>`;
-  html += `<div class="detail-stat"><span class="stat-num">${avgHours.toFixed(1)}h</span><span class="stat-label-sm">Purata/Sesi</span></div>`;
+  html += `<div class="detail-stat"><span class="stat-num">${history.length}</span><span class="stat-label-sm">Jumlah Sesi</span></div>`;
+  html += `<div class="detail-stat"><span class="stat-num">${completedSessions.length}</span><span class="stat-label-sm">Selesai</span></div>`;
+  html += `<div class="detail-stat"><span class="stat-num">${totalHours.toFixed(1)}j</span><span class="stat-label-sm">Jumlah Jam</span></div>`;
+  html += `<div class="detail-stat"><span class="stat-num">${avgHours.toFixed(1)}j</span><span class="stat-label-sm">Purata/Sesi</span></div>`;
   html += '</div>';
-
-  // Last attendance
   if (lastAttendance) {
     html += `<div class="detail-last-att"><span class="detail-label-sm">Terakhir Hadir:</span> ${formatDate(lastAttendance.checkInTime)} (${formatTime(lastAttendance.checkInTime)})</div>`;
   }
-
-  // Recent sessions list
   if (recentHistory.length > 0) {
-    html += '<div class="detail-history-list">';
-    html += '<h5>10 Sesi Terkini</h5>';
+    html += '<div class="detail-history-list"><h5>10 Sesi Terkini</h5>';
     recentHistory.forEach(a => {
-      const statusIcon = a.status==='present' ? '🟢' : '✅';
-      const dur = a.checkOutTime ? calcDuration(a.checkInTime, a.checkOutTime) : 'Belum Check-out';
-      html += `<div class="detail-history-item"><span>${statusIcon}</span><span>${formatDate(a.checkInTime)}</span><span>${formatTime(a.checkInTime)} - ${a.checkOutTime?formatTime(a.checkOutTime):'--:--'}</span><span class="history-dur">${dur}</span></div>`;
+      const icon = a.status==='present' ? '🟢' : '✅';
+      const dur = a.checkOutTime ? calcDuration(a.checkInTime, a.checkOutTime) : 'Belum Keluar';
+      html += `<div class="detail-history-item"><span>${icon}</span><span>${formatDate(a.checkInTime)}</span><span>${formatTime(a.checkInTime)}-${a.checkOutTime?formatTime(a.checkOutTime):'--:--'}</span><span class="history-dur">${dur}</span></div>`;
     });
     html += '</div>';
   } else {
     html += '<p class="no-history">Tiada rekod kehadiran.</p>';
   }
-
   html += '</div>';
 
   document.getElementById('modal-detail-body').innerHTML = html;
@@ -843,44 +703,22 @@ async function showStudentDetail(sid) {
   showModal('modal-student-detail');
 }
 
-// Edit student
 document.getElementById('btn-edit-student').addEventListener('click', async () => {
   if (currentDeleteId === null) return;
   hideAllModals();
-  // Reuse detail modal body as edit form
   const s = await db.getStudent(currentDeleteId);
   if (!s) return;
 
-  const html = `
-    <div class="form-group">
-      <label>Full Name *</label>
-      <input type="text" id="edit-name" value="${escapeHtml(s.name)}" required>
-    </div>
+  document.getElementById('modal-edit-body').innerHTML = `
+    <div class="form-group"><label>Nama Penuh *</label><input type="text" id="edit-name" value="${escapeHtml(s.name)}" required></div>
     <div class="form-row">
-      <div class="form-group">
-        <label>Age</label>
-        <input type="number" id="edit-age" value="${s.age||''}" min="1" max="120">
-      </div>
-      <div class="form-group">
-        <label>Phone</label>
-        <input type="tel" id="edit-phone" value="${escapeHtml(s.phone||'')}">
-      </div>
+      <div class="form-group"><label>Umur</label><input type="number" id="edit-age" value="${s.age||''}" min="1" max="120"></div>
+      <div class="form-group"><label>Telefon</label><input type="tel" id="edit-phone" value="${escapeHtml(s.phone||'')}"></div>
     </div>
-    <div class="form-group">
-      <label>Email</label>
-      <input type="email" id="edit-email" value="${escapeHtml(s.email||'')}">
-    </div>
-    <div class="form-group">
-      <label>Home Address</label>
-      <textarea id="edit-address" rows="2">${escapeHtml(s.address||'')}</textarea>
-    </div>
-    <div class="form-group">
-      <label>Reason to Join</label>
-      <input type="text" id="edit-reason" value="${escapeHtml(s.reasonToJoin||'')}">
-    </div>
+    <div class="form-group"><label>Email</label><input type="email" id="edit-email" value="${escapeHtml(s.email||'')}"></div>
+    <div class="form-group"><label>Alamat</label><textarea id="edit-address" rows="2">${escapeHtml(s.address||'')}</textarea></div>
+    <div class="form-group"><label>Sebab Sertai</label><input type="text" id="edit-reason" value="${escapeHtml(s.reasonToJoin||'')}"></div>
   `;
-
-  document.getElementById('modal-edit-body').innerHTML = html;
   showModal('modal-edit-student');
 
   document.getElementById('btn-save-edit').onclick = async () => {
@@ -892,20 +730,16 @@ document.getElementById('btn-edit-student').addEventListener('click', async () =
       address: document.getElementById('edit-address').value.trim(),
       reasonToJoin: document.getElementById('edit-reason').value.trim()
     };
-    if (!updated.name) { showToast('Name is required', 'error'); return; }
+    if (!updated.name) { showToast('Nama diperlukan', 'error'); return; }
     try {
       await db.updateStudent(currentDeleteId, updated);
       hideAllModals();
-      showToast(`${updated.name} updated!`, 'success');
-      loadStudents();
-      loadDashboard();
-    } catch (err) {
-      showToast('Update failed: ' + err.message, 'error');
-    }
+      showToast(`${updated.name} dikemaskini!`, 'success');
+      loadStudents(); loadDashboard();
+    } catch (err) { showToast('Gagal kemaskini: ' + err.message, 'error'); }
   };
 });
 
-// Delete with PIN protection
 document.getElementById('btn-delete-student').addEventListener('click', () => {
   hideAllModals();
   document.getElementById('delete-pin-input').value = '';
@@ -927,86 +761,59 @@ document.getElementById('btn-confirm-delete').addEventListener('click', async ()
     const s = await db.getStudent(currentDeleteId);
     await db.deleteStudent(currentDeleteId);
     hideAllModals();
-    showToast(`${s?s.name:'Student'} deleted`, 'success');
+    showToast(`${s?s.name:'Pelajar'} dipadam`, 'success');
     currentDeleteId = null;
-    loadStudents();
-    loadDashboard();
-  } catch (err) {
-    hideAllModals(); showToast('Failed to delete', 'error');
-  }
+    loadStudents(); loadDashboard();
+  } catch (err) { hideAllModals(); showToast('Gagal padam', 'error'); }
 });
 
-// ─── PIN Modal & Auth ─────────────────────────────────────────
+// ─── PIN Auth ─────────────────────────────────────────────────
 function showPinModal() {
   document.getElementById('pin-input').value = '';
   document.getElementById('pin-error').classList.add('hidden');
   showModal('modal-pin');
   setTimeout(() => document.getElementById('pin-input').focus(), 300);
 }
-
-document.getElementById('btn-admin-access').addEventListener('click', (e) => {
-  e.preventDefault();
-  showPinModal();
-});
-
+document.getElementById('btn-admin-access').addEventListener('click', (e) => { e.preventDefault(); showPinModal(); });
 document.getElementById('btn-pin-submit').addEventListener('click', () => {
-  const enteredPin = document.getElementById('pin-input').value.trim();
-  if (enteredPin === getPin()) {
-    unlockAdmin();
-    hideAllModals();
-    switchToAdminMode();
+  if (document.getElementById('pin-input').value.trim() === getPin()) {
+    unlockAdmin(); hideAllModals(); switchToAdminMode();
   } else {
     document.getElementById('pin-error').classList.remove('hidden');
     document.getElementById('pin-input').value = '';
     document.getElementById('pin-input').focus();
   }
 });
-
-document.getElementById('pin-input').addEventListener('keydown', (e) => {
-  if (e.key==='Enter') document.getElementById('btn-pin-submit').click();
-});
-
-// Admin lock button
+document.getElementById('pin-input').addEventListener('keydown', (e) => { if (e.key==='Enter') document.getElementById('btn-pin-submit').click(); });
 document.getElementById('btn-admin-lock').addEventListener('click', () => {
-  if (confirm('Lock admin access? You will need to enter the PIN again.')) {
-    switchToStudentMode();
-  }
+  if (confirm('Kunci akses admin? Anda perlu masukkan PIN semula.')) switchToStudentMode();
 });
 
-// ─── Change PIN ───────────────────────────────────────────────
-let changePinVisible = false;
-
-// Long press on header clock to change PIN
+// Change PIN (double-click lock button)
 document.getElementById('btn-admin-lock').addEventListener('dblclick', () => {
-  showChangePinModal();
-});
-
-// Add change-pin from dashboard (subtle)
-async function showChangePinModal() {
   document.getElementById('change-pin-new').value = '';
   document.getElementById('change-pin-confirm').value = '';
   document.getElementById('change-pin-error').classList.add('hidden');
   showModal('modal-change-pin');
   setTimeout(() => document.getElementById('change-pin-new').focus(), 300);
-}
-
+});
 document.getElementById('btn-change-pin-save').addEventListener('click', () => {
   const p1 = document.getElementById('change-pin-new').value.trim();
   const p2 = document.getElementById('change-pin-confirm').value.trim();
   if (!p1||!p2||p1!==p2||p1.length<1||p1.length>6) {
-    document.getElementById('change-pin-error').classList.remove('hidden');
-    return;
+    document.getElementById('change-pin-error').classList.remove('hidden'); return;
   }
-  setPin(p1);
-  hideAllModals();
-  showToast('Admin PIN changed!','success');
+  setPin(p1); hideAllModals();
+  showToast('PIN admin ditukar!', 'success');
 });
 
 // ─── Navigation ───────────────────────────────────────────────
 function navigateTo(page) {
   document.querySelectorAll('#admin-view .page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById(`page-${page}`).classList.add('active');
+  const pgEl = document.getElementById(`page-${page}`);
+  pgEl.classList.add('active');
+  pgEl.style.animation = 'none'; pgEl.offsetHeight; pgEl.style.animation = 'fadeIn 0.25s ease-out';
   document.querySelector(`.nav-btn[data-page="${page}"]`).classList.add('active');
 
   switch(page) {
@@ -1014,10 +821,8 @@ function navigateTo(page) {
     case 'checkin': setupCheckIn(); document.getElementById('checkin-search').focus(); break;
     case 'checkout': loadCheckOut(); break;
     case 'students': loadStudents(); break;
-    case 'register': break;
   }
 }
-
 document.querySelectorAll('.nav-btn').forEach(btn => {
   btn.addEventListener('click', () => navigateTo(btn.dataset.page));
 });
@@ -1026,7 +831,7 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
 document.getElementById('modal-overlay').addEventListener('click', function(e) {
   if (e.target===this) hideAllModals();
 });
-document.querySelectorAll('.modal-close').forEach(btn => { btn.addEventListener('click', hideAllModals); });
+document.querySelectorAll('.modal-close').forEach(btn => btn.addEventListener('click', hideAllModals));
 
 // ─── Clock ────────────────────────────────────────────────────
 function updateClock() {
@@ -1043,18 +848,11 @@ async function init() {
     setupStudentRegistration();
     updateClock();
     setInterval(updateClock, 30000);
-
-    // Always start in student/registration view (admin must enter PIN)
-    // No sessionStorage — prevents iOS from accidentally showing dashboard
     switchToStudentMode();
   } catch (err) {
     console.error('Init failed:', err);
-    document.getElementById('student-view').innerHTML = '<div style="padding:40px;text-align:center;"><h2>App failed to load</h2><p>Please refresh the page.</p></div>';
+    document.getElementById('student-view').innerHTML = '<div style="padding:40px;text-align:center;"><h2>Aplikasi gagal dimuatkan</h2><p>Sila muat semula halaman.</p></div>';
   }
 }
-
 document.addEventListener('DOMContentLoaded', init);
-
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
-}
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(() => {}); }

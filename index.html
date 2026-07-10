@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#2ea3f2">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>DMP Attendance</title>
+  <title>DMP Kehadiran</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -20,7 +20,7 @@
       <div class="student-header-left">
         <img src="logo.png" alt="DMP Logo" class="student-logo" onerror="this.style.display='none'">
       </div>
-      <h1>Student Registration</h1>
+      <h1>Pendaftaran Pelajar</h1>
     </header>
 
     <main class="student-main">
@@ -42,33 +42,33 @@
           </div>
 
           <div class="form-group">
-            <label for="reg-name">Full Name *</label>
-            <input type="text" id="reg-name" required placeholder="Enter full name">
+            <label for="reg-name">Nama Penuh *</label>
+            <input type="text" id="reg-name" required placeholder="Masukkan nama penuh">
           </div>
 
           <div class="form-row">
             <div class="form-group">
-              <label for="reg-age">Age *</label>
-              <input type="number" id="reg-age" required min="1" max="120" placeholder="Age">
+              <label for="reg-age">Umur *</label>
+              <input type="number" id="reg-age" required min="1" max="120" placeholder="Umur">
             </div>
             <div class="form-group">
-              <label for="reg-phone">Phone Number *</label>
+              <label for="reg-phone">No. Telefon *</label>
               <input type="tel" id="reg-phone" required placeholder="01x-xxxxxxx">
             </div>
           </div>
 
           <div class="form-group">
             <label for="reg-email">Email</label>
-            <input type="email" id="reg-email" placeholder="email@example.com">
+            <input type="email" id="reg-email" placeholder="emel@contoh.com">
           </div>
 
           <div class="form-group">
-            <label for="reg-address">Home Address</label>
-            <textarea id="reg-address" rows="2" placeholder="Enter address"></textarea>
+            <label for="reg-address">Alamat Rumah</label>
+            <textarea id="reg-address" rows="2" placeholder="Masukkan alamat"></textarea>
           </div>
 
           <div class="form-group">
-            <label for="reg-reason">Reason to Join Class *</label>
+            <label for="reg-reason">Sebab Sertai Kelas *</label>
             <select id="reg-reason" required class="form-select">
               <option value="">-- Pilih Sebab --</option>
               <option value="Learn Al-Quran & Fardu Ain">Learn Al-Quran &amp; Fardu Ain</option>
@@ -109,11 +109,11 @@
     <header class="app-header">
       <div class="header-left">
         <img src="logo.png" alt="DMP" class="header-logo" onerror="this.style.display='none'">
-        <h1>DMP Attendance</h1>
+        <h1>DMP Kehadiran</h1>
       </div>
       <div class="header-right">
         <span id="header-clock" class="header-clock"></span>
-        <button id="btn-admin-lock" class="btn-icon-lock" title="Lock admin">🔒</button>
+        <button id="btn-admin-lock" class="btn-icon-lock" title="Kunci admin">🔒</button>
       </div>
     </header>
 
@@ -125,45 +125,45 @@
           <div class="stat-card accent-blue">
             <div class="stat-icon">👥</div>
             <div class="stat-value" id="stat-total-students">0</div>
-            <div class="stat-label">Total Students</div>
+            <div class="stat-label">Jumlah Pelajar</div>
           </div>
           <div class="stat-card accent-green">
             <div class="stat-icon">✅</div>
             <div class="stat-value" id="stat-checked-in">0</div>
-            <div class="stat-label">Checked In Today</div>
+            <div class="stat-label">Hadir Hari Ini</div>
           </div>
           <div class="stat-card accent-amber">
             <div class="stat-icon">⏱️</div>
             <div class="stat-value" id="stat-avg-hours">0h</div>
-            <div class="stat-label">Avg Hours Today</div>
+            <div class="stat-label">Purata Jam</div>
           </div>
           <div class="stat-card accent-purple">
             <div class="stat-icon">🚪</div>
             <div class="stat-value" id="stat-checked-out">0</div>
-            <div class="stat-label">Checked Out</div>
+            <div class="stat-label">Telah Keluar</div>
           </div>
         </div>
 
         <!-- Backup & Restore bar -->
         <div class="backup-bar" id="backup-bar">
           <button id="btn-backup-data" class="btn btn-outline btn-sm">💾 Backup</button>
-          <button id="btn-restore-data" class="btn btn-outline btn-sm">📥 Restore</button>
+          <button id="btn-restore-data" class="btn btn-outline btn-sm">📥 Pulih</button>
           <input type="file" id="restore-file-input" accept=".json" hidden>
-          <span class="backup-hint">Backup data sebelum update app</span>
+          <span class="backup-hint">Backup data sebelum kemaskini app</span>
         </div>
 
         <div class="section-header">
-          <h2>Attendance</h2>
+          <h2>Kehadiran</h2>
           <div class="dashboard-actions">
             <input type="date" id="dashboard-date" class="date-picker">
-            <button id="btn-export-report" class="btn btn-primary btn-sm">📤 Report</button>
+            <button id="btn-export-report" class="btn btn-primary btn-sm">📤 Laporan</button>
           </div>
         </div>
 
         <div id="today-attendance-list" class="attendance-list">
           <div class="empty-state">
             <div class="empty-icon">📭</div>
-            <p>No attendance records for today yet.</p>
+            <p>Tiada rekod kehadiran untuk hari ini.</p>
           </div>
         </div>
       </section>
@@ -172,12 +172,12 @@
       <section id="page-checkin" class="page">
         <div class="search-box">
           <span class="search-icon">🔍</span>
-          <input type="text" id="checkin-search" placeholder="Filter students... (tap Check In button to mark attendance)" autocomplete="off">
+          <input type="text" id="checkin-search" placeholder="Tapis pelajar..." autocomplete="off">
         </div>
         <div id="checkin-results" class="student-list">
           <div class="empty-state">
             <div class="empty-icon">👆</div>
-            <p>Search for a student to check them in.</p>
+            <p>Cari pelajar untuk daftar kehadiran.</p>
           </div>
         </div>
       </section>
@@ -185,13 +185,13 @@
       <!-- PAGE: Check-Out -->
       <section id="page-checkout" class="page">
         <div class="section-header">
-          <h2>Currently Present</h2>
+          <h2>Sedang Hadir</h2>
           <span id="checkout-count" class="count-badge">0</span>
         </div>
         <div id="checkout-list" class="attendance-list">
           <div class="empty-state">
             <div class="empty-icon">🏠</div>
-            <p>No one is currently checked in.</p>
+            <p>Tiada pelajar sedang hadir.</p>
           </div>
         </div>
       </section>
@@ -199,7 +199,7 @@
       <!-- PAGE: Register (admin side) -->
       <section id="page-register" class="page">
         <div class="admin-reg-header">
-          <h2>Student Registration</h2>
+          <h2>Pendaftaran Pelajar</h2>
           <p class="kiosk-tip">💡 <strong>Kiosk Mode:</strong> Tekan butang <strong>🔒 Lock</strong> di header untuk buka student form. Bagi phone pada pelajar, dia isi borang, lepas hantar auto-reset untuk pelajar seterusnya.</p>
         </div>
         <form id="admin-register-form" class="register-form">
@@ -212,33 +212,33 @@
           </div>
 
           <div class="form-group">
-            <label for="admin-reg-name">Full Name *</label>
-            <input type="text" id="admin-reg-name" required placeholder="Enter full name">
+            <label for="admin-reg-name">Nama Penuh *</label>
+            <input type="text" id="admin-reg-name" required placeholder="Masukkan nama penuh">
           </div>
 
           <div class="form-row">
             <div class="form-group">
-              <label for="admin-reg-age">Age *</label>
-              <input type="number" id="admin-reg-age" required min="1" max="120" placeholder="Age">
+              <label for="admin-reg-age">Umur *</label>
+              <input type="number" id="admin-reg-age" required min="1" max="120" placeholder="Umur">
             </div>
             <div class="form-group">
-              <label for="admin-reg-phone">Phone Number *</label>
+              <label for="admin-reg-phone">No. Telefon *</label>
               <input type="tel" id="admin-reg-phone" required placeholder="01x-xxxxxxx">
             </div>
           </div>
 
           <div class="form-group">
             <label for="admin-reg-email">Email</label>
-            <input type="email" id="admin-reg-email" placeholder="email@example.com">
+            <input type="email" id="admin-reg-email" placeholder="emel@contoh.com">
           </div>
 
           <div class="form-group">
-            <label for="admin-reg-address">Home Address</label>
-            <textarea id="admin-reg-address" rows="2" placeholder="Enter address"></textarea>
+            <label for="admin-reg-address">Alamat Rumah</label>
+            <textarea id="admin-reg-address" rows="2" placeholder="Masukkan alamat"></textarea>
           </div>
 
           <div class="form-group">
-            <label for="admin-reg-reason">Reason to Join Class *</label>
+            <label for="admin-reg-reason">Sebab Sertai Kelas *</label>
             <select id="admin-reg-reason" required class="form-select">
               <option value="">-- Pilih Sebab --</option>
               <option value="Learn Al-Quran & Fardu Ain">Learn Al-Quran &amp; Fardu Ain</option>
@@ -248,7 +248,7 @@
           </div>
 
           <div class="form-actions">
-            <button type="submit" class="btn btn-primary btn-block">Register Student</button>
+            <button type="submit" class="btn btn-primary btn-block">Daftar Pelajar</button>
           </div>
         </form>
       </section>
@@ -257,12 +257,12 @@
       <section id="page-students" class="page">
         <div class="search-box">
           <span class="search-icon">🔍</span>
-          <input type="text" id="students-search" placeholder="Search or filter students..." autocomplete="off">
+          <input type="text" id="students-search" placeholder="Cari atau tapis pelajar..." autocomplete="off">
         </div>
         <div id="students-list" class="student-list">
           <div class="empty-state">
             <div class="empty-icon">📝</div>
-            <p>No students registered yet.</p>
+            <p>Tiada pelajar berdaftar lagi.</p>
           </div>
         </div>
       </section>
@@ -273,23 +273,23 @@
     <nav class="bottom-nav">
       <button class="nav-btn active" data-page="dashboard">
         <span class="nav-icon">📊</span>
-        <span class="nav-label">Dashboard</span>
+        <span class="nav-label">Utama</span>
       </button>
       <button class="nav-btn" data-page="checkin">
         <span class="nav-icon">✅</span>
-        <span class="nav-label">Check-In</span>
+        <span class="nav-label">Hadir</span>
       </button>
       <button class="nav-btn" data-page="checkout">
         <span class="nav-icon">🚪</span>
-        <span class="nav-label">Check-Out</span>
+        <span class="nav-label">Keluar</span>
       </button>
       <button class="nav-btn" data-page="register">
         <span class="nav-icon">➕</span>
-        <span class="nav-label">Register</span>
+        <span class="nav-label">Daftar</span>
       </button>
       <button class="nav-btn" data-page="students">
         <span class="nav-icon">👥</span>
-        <span class="nav-label">Students</span>
+        <span class="nav-label">Pelajar</span>
       </button>
     </nav>
   </div>
@@ -302,113 +302,113 @@
     <!-- PIN Entry Modal -->
     <div id="modal-pin" class="modal">
       <div class="modal-header">
-        <h3>🔒 Admin Access</h3>
+        <h3>🔒 Akses Admin</h3>
         <button class="modal-close">&times;</button>
       </div>
       <div class="modal-body pin-modal-body">
-        <p class="pin-instruction">Enter admin PIN to access attendance management</p>
-        <input type="password" id="pin-input" class="pin-input" maxlength="6" placeholder="Enter PIN" autocomplete="off" inputmode="numeric">
-        <p class="pin-error hidden" id="pin-error">Incorrect PIN. Please try again.</p>
+        <p class="pin-instruction">Masukkan PIN admin untuk akses pengurusan kehadiran</p>
+        <input type="password" id="pin-input" class="pin-input" maxlength="6" placeholder="Masukkan PIN" autocomplete="off" inputmode="numeric">
+        <p class="pin-error hidden" id="pin-error">PIN salah. Sila cuba lagi.</p>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-outline modal-close">Cancel</button>
-        <button class="btn btn-primary" id="btn-pin-submit">Unlock</button>
+        <button class="btn btn-outline modal-close">Batal</button>
+        <button class="btn btn-primary" id="btn-pin-submit">Buka</button>
       </div>
     </div>
 
     <!-- Change PIN Modal -->
     <div id="modal-change-pin" class="modal hidden">
       <div class="modal-header">
-        <h3>Change Admin PIN</h3>
+        <h3>Tukar PIN Admin</h3>
         <button class="modal-close">&times;</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label for="change-pin-new">New PIN</label>
-          <input type="password" id="change-pin-new" class="pin-input" maxlength="6" placeholder="New PIN" inputmode="numeric">
+          <label for="change-pin-new">PIN Baru</label>
+          <input type="password" id="change-pin-new" class="pin-input" maxlength="6" placeholder="PIN Baru" inputmode="numeric">
         </div>
         <div class="form-group">
-          <label for="change-pin-confirm">Confirm New PIN</label>
-          <input type="password" id="change-pin-confirm" class="pin-input" maxlength="6" placeholder="Confirm PIN" inputmode="numeric">
+          <label for="change-pin-confirm">Sahkan PIN Baru</label>
+          <input type="password" id="change-pin-confirm" class="pin-input" maxlength="6" placeholder="Sahkan PIN" inputmode="numeric">
         </div>
-        <p class="pin-error hidden" id="change-pin-error">PINs do not match or invalid.</p>
+        <p class="pin-error hidden" id="change-pin-error">PIN tidak sepadan atau tidak sah.</p>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-outline modal-close">Cancel</button>
-        <button class="btn btn-primary" id="btn-change-pin-save">Save PIN</button>
+        <button class="btn btn-outline modal-close">Batal</button>
+        <button class="btn btn-primary" id="btn-change-pin-save">Simpan PIN</button>
       </div>
     </div>
 
     <!-- Confirm Check-In Modal -->
     <div id="modal-confirm-checkin" class="modal hidden">
       <div class="modal-header">
-        <h3>Confirm Check-In</h3>
+        <h3>Sahkan Kehadiran</h3>
         <button class="modal-close">&times;</button>
       </div>
       <div class="modal-body" id="modal-checkin-body"></div>
       <div class="modal-footer">
-        <button class="btn btn-outline modal-close">Cancel</button>
-        <button class="btn btn-primary" id="btn-confirm-checkin">✅ Check In</button>
+        <button class="btn btn-outline modal-close">Batal</button>
+        <button class="btn btn-primary" id="btn-confirm-checkin">✅ Hadir</button>
       </div>
     </div>
 
     <!-- Confirm Check-Out Modal -->
     <div id="modal-confirm-checkout" class="modal hidden">
       <div class="modal-header">
-        <h3>Confirm Check-Out</h3>
+        <h3>Sahkan Keluar</h3>
         <button class="modal-close">&times;</button>
       </div>
       <div class="modal-body" id="modal-checkout-body"></div>
       <div class="modal-footer">
-        <button class="btn btn-outline modal-close">Cancel</button>
-        <button class="btn btn-danger" id="btn-confirm-checkout">🚪 Check Out</button>
+        <button class="btn btn-outline modal-close">Batal</button>
+        <button class="btn btn-danger" id="btn-confirm-checkout">🚪 Keluar</button>
       </div>
     </div>
 
     <!-- Student Detail Modal -->
     <div id="modal-student-detail" class="modal hidden">
       <div class="modal-header">
-        <h3>Student Details</h3>
+        <h3>Butiran Pelajar</h3>
         <button class="modal-close">&times;</button>
       </div>
       <div class="modal-body" id="modal-detail-body"></div>
       <div class="modal-footer">
-        <button class="btn btn-outline modal-close">Close</button>
-        <button class="btn btn-primary" id="btn-edit-student">✏️ Edit</button>
-        <button class="btn btn-danger" id="btn-delete-student">🗑️ Delete</button>
+        <button class="btn btn-outline modal-close">Tutup</button>
+        <button class="btn btn-primary" id="btn-edit-student">✏️ Kemaskini</button>
+        <button class="btn btn-danger" id="btn-delete-student">🗑️ Padam</button>
       </div>
     </div>
 
     <!-- Edit Student Modal -->
     <div id="modal-edit-student" class="modal hidden">
       <div class="modal-header">
-        <h3>Edit Student</h3>
+        <h3>Kemaskini Pelajar</h3>
         <button class="modal-close">&times;</button>
       </div>
       <div class="modal-body" id="modal-edit-body"></div>
       <div class="modal-footer">
-        <button class="btn btn-outline modal-close">Cancel</button>
-        <button class="btn btn-primary" id="btn-save-edit">💾 Save</button>
+        <button class="btn btn-outline modal-close">Batal</button>
+        <button class="btn btn-primary" id="btn-save-edit">💾 Simpan</button>
       </div>
     </div>
 
     <!-- Delete Confirm Modal -->
     <div id="modal-delete-confirm" class="modal hidden">
       <div class="modal-header">
-        <h3>Delete Student?</h3>
+        <h3>Padam Pelajar?</h3>
         <button class="modal-close">&times;</button>
       </div>
       <div class="modal-body">
-        <p>Are you sure you want to delete this student? All their attendance records will also be removed.</p>
-        <p class="text-danger">Enter admin PIN to confirm deletion.</p>
+        <p>Anda pasti mahu padam pelajar ini? Semua rekod kehadiran juga akan dipadam.</p>
+        <p class="text-danger">Masukkan PIN admin untuk sahkan pemadaman.</p>
         <div class="pin-delete-wrapper">
           <input type="password" id="delete-pin-input" class="pin-input" maxlength="6" placeholder="PIN" inputmode="numeric">
-          <p class="pin-error hidden" id="delete-pin-error">Incorrect PIN.</p>
+          <p class="pin-error hidden" id="delete-pin-error">PIN salah.</p>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-outline modal-close">Cancel</button>
-        <button class="btn btn-danger" id="btn-confirm-delete">🗑️ Delete</button>
+        <button class="btn btn-outline modal-close">Batal</button>
+        <button class="btn btn-danger" id="btn-confirm-delete">🗑️ Padam</button>
       </div>
     </div>
   </div>
