@@ -442,33 +442,68 @@ async function exportDailyReport() {
 document.getElementById('btn-export-report').addEventListener('click', exportDailyReport);
 
 // ─── Admin - Check-In ─────────────────────────────────────────
-function setupCheckIn() {
+let checkInAllStudents = [];
+let checkInTodayIds = new Set();
+
+async function setupCheckIn() {
   document.getElementById('checkin-search').value = '';
-  document.getElementById('checkin-results').innerHTML = '<div class="empty-state"><div class="empty-icon">👆</div><p>Search for a student to check them in.</p></div>';
+  checkInAllStudents = await db.getStudents();
+  const todayAtt = await db.getTodayAttendance();
+  checkInTodayIds = new Set(todayAtt.map(a => a.studentId));
+  renderCheckInList();
 }
 
-document.getElementById('checkin-search').addEventListener('input', async function() {
-  const q = this.value.trim();
-  if (!q) { setupCheckIn(); return; }
+function renderCheckInList(filterQuery = '') {
+  const q = filterQuery.toLowerCase().trim();
+  let students = q
+    ? checkInAllStudents.filter(s => s.name.toLowerCase().includes(q) || (s.phone && s.phone.includes(q)))
+    : checkInAllStudents;
 
-  const students = await db.searchStudents(q);
-  const todayAtt = await db.getTodayAttendance();
-  const checkedInIds = new Set(todayAtt.map(a=>a.studentId));
+  // Sort: not checked in first, then alphabetical
+  students = [...students].sort((a, b) => {
+    const aIn = checkInTodayIds.has(a.id);
+    const bIn = checkInTodayIds.has(b.id);
+    if (aIn && !bIn) return 1;
+    if (!aIn && bIn) return -1;
+    return a.name.localeCompare(b.name);
+  });
+
   const div = document.getElementById('checkin-results');
 
-  if (students.length===0) {
-    div.innerHTML = `<div class="empty-state"><div class="empty-icon">🔎</div><p>No students found matching "${escapeHtml(q)}"</p></div>`;
+  if (students.length === 0) {
+    div.innerHTML = q
+      ? `<div class="empty-state"><div class="empty-icon">🔎</div><p>No students found matching "${escapeHtml(q)}"</p></div>`
+      : '<div class="empty-state"><div class="empty-icon">📝</div><p>No students registered yet. Go to Register tab first.</p></div>';
     return;
   }
 
-  div.innerHTML = students.map(s => {
-    const inToday = checkedInIds.has(s.id);
-    return `<div class="student-item"><div class="item-left"><div class="item-avatar">${s.profilePicture?`<img src="${s.profilePicture}" alt="">`:'👤'}</div><div class="item-info"><div class="item-name">${escapeHtml(s.name)}</div><div class="item-sub">${s.age?s.age+' yrs':''}${s.phone?' · '+escapeHtml(s.phone):''}</div></div></div><div class="item-actions">${inToday?'<span style="color:var(--green);font-size:12px;font-weight:600;">✅ In</span>':`<button class="btn btn-success btn-sm btn-checkin" data-id="${s.id}" data-name="${escapeHtml(s.name)}">Check In</button>`}</div></div>`;
-  }).join('');
+  const notCheckedIn = students.filter(s => !checkInTodayIds.has(s.id));
+  const checkedIn = students.filter(s => checkInTodayIds.has(s.id));
+
+  let html = '';
+  if (notCheckedIn.length > 0) {
+    html += `<div class="checkin-group-label">⬜ Belum Check-In (${notCheckedIn.length})</div>`;
+    html += notCheckedIn.map(s => {
+      return `<div class="student-item"><div class="item-left"><div class="item-avatar">${s.profilePicture ? `<img src="${s.profilePicture}" alt="">` : '👤'}</div><div class="item-info"><div class="item-name">${escapeHtml(s.name)}</div><div class="item-sub">${s.age ? s.age + ' yrs' : ''}${s.phone ? ' · ' + escapeHtml(s.phone) : ''}</div></div></div><div class="item-actions"><button class="btn btn-success btn-sm btn-checkin" data-id="${s.id}" data-name="${escapeHtml(s.name)}">Check In</button></div></div>`;
+    }).join('');
+  }
+
+  if (checkedIn.length > 0) {
+    html += `<div class="checkin-group-label checkin-done-label">✅ Dah Check-In (${checkedIn.length})</div>`;
+    html += checkedIn.map(s => {
+      return `<div class="student-item checkin-done-item"><div class="item-left"><div class="item-avatar">${s.profilePicture ? `<img src="${s.profilePicture}" alt="">` : '👤'}</div><div class="item-info"><div class="item-name">${escapeHtml(s.name)}</div><div class="item-sub">${s.age ? s.age + ' yrs' : ''}${s.phone ? ' · ' + escapeHtml(s.phone) : ''}</div></div></div><div class="item-actions"><span class="checkin-done-badge">✅ Done</span></div></div>`;
+    }).join('');
+  }
+
+  div.innerHTML = html;
 
   div.querySelectorAll('.btn-checkin').forEach(btn => {
     btn.addEventListener('click', () => showCheckInConfirm(parseInt(btn.dataset.id), btn.dataset.name));
   });
+}
+
+document.getElementById('checkin-search').addEventListener('input', function() {
+  renderCheckInList(this.value);
 });
 
 function showCheckInConfirm(sid, name) {
@@ -483,7 +518,9 @@ async function performCheckIn(sid, name) {
     await db.checkIn(sid, name);
     hideAllModals();
     showToast(`${name} checked in! ✅`, 'success');
-    document.getElementById('checkin-search').dispatchEvent(new Event('input'));
+    // Refresh check-in list
+    checkInTodayIds.add(sid);
+    renderCheckInList(document.getElementById('checkin-search').value);
     loadDashboard();
   } catch (err) {
     hideAllModals(); showToast(err.message, 'error');

@@ -345,6 +345,34 @@ body.student-mode {
   font-weight: 600;
 }
 
+/* Check-In group labels */
+.checkin-group-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 8px 4px 4px;
+  margin-top: 4px;
+}
+
+.checkin-group-label:first-child { margin-top: 0; }
+
+.checkin-done-label {
+  color: var(--green);
+  padding-top: 16px;
+  border-top: 1px dashed var(--border);
+  margin-top: 8px;
+}
+
+.checkin-done-item {
+  opacity: 0.65;
+}
+
+.checkin-done-badge {
+  font-size: 11px;
+  color: var(--green);
+  font-weight: 600;
+}
+
 /* ===== LISTS ===== */
 .attendance-list, .student-list {
   display: flex;
