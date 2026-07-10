@@ -69,7 +69,12 @@
 
           <div class="form-group">
             <label for="reg-reason">Reason to Join Class *</label>
-            <textarea id="reg-reason" rows="2" required placeholder="Why do you want to join?"></textarea>
+            <select id="reg-reason" required class="form-select">
+              <option value="">-- Pilih Sebab --</option>
+              <option value="Learn Al-Quran & Fardu Ain">Learn Al-Quran &amp; Fardu Ain</option>
+              <option value="other">Others (tulis sendiri)</option>
+            </select>
+            <textarea id="reg-reason-other" rows="2" placeholder="Sila nyatakan sebab..." class="form-textarea hidden"></textarea>
           </div>
 
           <div class="form-actions">
@@ -226,7 +231,12 @@
 
           <div class="form-group">
             <label for="admin-reg-reason">Reason to Join Class *</label>
-            <textarea id="admin-reg-reason" rows="2" required placeholder="Why do you want to join?"></textarea>
+            <select id="admin-reg-reason" required class="form-select">
+              <option value="">-- Pilih Sebab --</option>
+              <option value="Learn Al-Quran & Fardu Ain">Learn Al-Quran &amp; Fardu Ain</option>
+              <option value="other">Others (tulis sendiri)</option>
+            </select>
+            <textarea id="admin-reg-reason-other" rows="2" placeholder="Sila nyatakan sebab..." class="form-textarea hidden"></textarea>
           </div>
 
           <div class="form-actions">

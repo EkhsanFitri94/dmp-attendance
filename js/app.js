@@ -210,6 +210,27 @@ function switchToStudentMode() {
 let studentPhotoData = null;
 let adminPhotoData = null;
 
+function getReasonValue(selectId, otherId) {
+  const select = document.getElementById(selectId);
+  if (select.value === 'other') {
+    return document.getElementById(otherId).value.trim() || 'Others';
+  }
+  return select.value;
+}
+
+function toggleReasonOther(selectId, otherId) {
+  const select = document.getElementById(selectId);
+  const other = document.getElementById(otherId);
+  if (select.value === 'other') {
+    other.classList.remove('hidden');
+    other.setAttribute('required', '');
+  } else {
+    other.classList.add('hidden');
+    other.removeAttribute('required');
+    other.value = '';
+  }
+}
+
 function setupStudentRegistration() {
   // Student view registration
   document.getElementById('photo-upload-area').addEventListener('click', () => document.getElementById('photo-input').click());
@@ -223,7 +244,7 @@ function setupStudentRegistration() {
       phone: document.getElementById('reg-phone').value.trim(),
       email: document.getElementById('reg-email').value.trim(),
       address: document.getElementById('reg-address').value.trim(),
-      reasonToJoin: document.getElementById('reg-reason').value.trim(),
+      reasonToJoin: getReasonValue('reg-reason', 'reg-reason-other'),
       profilePicture: studentPhotoData
     });
     // On success in student view, show success card
@@ -241,13 +262,22 @@ function setupStudentRegistration() {
       phone: document.getElementById('admin-reg-phone').value.trim(),
       email: document.getElementById('admin-reg-email').value.trim(),
       address: document.getElementById('admin-reg-address').value.trim(),
-      reasonToJoin: document.getElementById('admin-reg-reason').value.trim(),
+      reasonToJoin: getReasonValue('admin-reg-reason', 'admin-reg-reason-other'),
       profilePicture: adminPhotoData
     });
     this.reset();
     adminPhotoData = null;
     resetAdminPhotoPreview();
     loadDashboard();
+  });
+
+  // Toggle "other" reason textareas
+  document.getElementById('reg-reason').addEventListener('change', () => toggleReasonOther('reg-reason', 'reg-reason-other'));
+  document.getElementById('admin-reg-reason').addEventListener('change', () => toggleReasonOther('admin-reg-reason', 'admin-reg-reason-other'));
+
+  // Handle Enter key in "other" textareas to submit the form
+  document.getElementById('reg-reason-other').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('register-form').requestSubmit(); }
   });
 }
 
