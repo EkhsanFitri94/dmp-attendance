@@ -494,6 +494,101 @@ async function exportDailyReport() {
 
 document.getElementById('btn-export-report').addEventListener('click', exportDailyReport);
 
+// ─── Backup & Restore ─────────────────────────────────────────
+async function backupAllData() {
+  try {
+    const students = await db.getStudents();
+    // Get all attendance across all dates
+    const tx = db.db.transaction('attendance', 'readonly');
+    const allAtt = await new Promise((resolve, reject) => {
+      const req = tx.objectStore('attendance').getAll();
+      req.onsuccess = (e) => resolve(e.target.result || []);
+      req.onerror = (e) => reject(e.target.error);
+    });
+
+    const backup = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      students: students,
+      attendance: allAtt
+    };
+
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const now = new Date();
+    const fname = `dmp-backup-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.json`;
+    a.href = url;
+    a.download = fname;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast(`Backup saved! (${students.length} students, ${allAtt.length} records) 📦`, 'success');
+  } catch (err) {
+    showToast('Backup failed: ' + err.message, 'error');
+  }
+}
+
+async function restoreAllData(file) {
+  try {
+    const text = await file.text();
+    const backup = JSON.parse(text);
+    if (!backup.students || !backup.attendance) {
+      throw new Error('Invalid backup file');
+    }
+
+    if (!confirm(`Restore ${backup.students.length} students and ${backup.attendance.length} attendance records?\n\nWARNING: This will replace ALL existing data.`)) {
+      return;
+    }
+
+    // Clear existing data
+    await new Promise((resolve, reject) => {
+      const tx = db.db.transaction(['students', 'attendance'], 'readwrite');
+      tx.objectStore('students').clear();
+      tx.objectStore('attendance').clear();
+      tx.oncomplete = () => resolve();
+      tx.onerror = (e) => reject(e.target.error);
+    });
+
+    // Restore students (preserve original IDs)
+    await new Promise((resolve, reject) => {
+      const tx = db.db.transaction('students', 'readwrite');
+      const store = tx.objectStore('students');
+      for (const s of backup.students) {
+        store.put(s); // put preserves id
+      }
+      tx.oncomplete = () => resolve();
+      tx.onerror = (e) => reject(e.target.error);
+    });
+
+    // Restore attendance
+    await new Promise((resolve, reject) => {
+      const tx = db.db.transaction('attendance', 'readwrite');
+      const store = tx.objectStore('attendance');
+      for (const a of backup.attendance) {
+        store.put(a);
+      }
+      tx.oncomplete = () => resolve();
+      tx.onerror = (e) => reject(e.target.error);
+    });
+
+    showToast(`Restored ${backup.students.length} students, ${backup.attendance.length} records ✅`, 'success');
+    loadDashboard();
+  } catch (err) {
+    showToast('Restore failed: ' + err.message, 'error');
+  }
+}
+
+document.getElementById('btn-backup-data').addEventListener('click', backupAllData);
+document.getElementById('btn-restore-data').addEventListener('click', () => {
+  document.getElementById('restore-file-input').click();
+});
+document.getElementById('restore-file-input').addEventListener('change', function() {
+  if (this.files[0]) {
+    restoreAllData(this.files[0]);
+    this.value = '';
+  }
+});
+
 // ─── Admin - Check-In ─────────────────────────────────────────
 let checkInAllStudents = [];
 let checkInTodayIds = new Set();
